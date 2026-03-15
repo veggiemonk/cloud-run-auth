@@ -26,5 +26,5 @@ jobs:
           version: latest
           args: release --clean
         env:
-          KO_DOCKER_REPO: ghcr.io/veggiemonk/cloud-run-iap
+          KO_DOCKER_REPO: ghcr.io/veggiemonk/cloud-run-auth
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

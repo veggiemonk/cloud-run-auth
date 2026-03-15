@@ -6,7 +6,24 @@ before:
     - go tool templ generate
 
 builds:
-  - env:
+  - id: runiap
+    main: ./cmd/runiap
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+
+  - id: runoauth
+    main: ./cmd/runoauth
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
@@ -20,8 +37,27 @@ builds:
       - -s -w
 
 kos:
-  - repositories:
-      - ghcr.io/veggiemonk/cloud-run-iap
+  - id: runiap
+    repositories:
+      - ghcr.io/veggiemonk/cloud-run-auth/runiap
+    bare: true
+    base_image: cgr.dev/chainguard/static
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    tags:
+      - "{{.Tag}}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    creation_time: "{{.CommitTimestamp}}"
+    sbom: none
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+
+  - id: runoauth
+    repositories:
+      - ghcr.io/veggiemonk/cloud-run-auth/runoauth
     bare: true
     base_image: cgr.dev/chainguard/static
     platforms:

@@ -5,9 +5,9 @@ BIN_DIR := bin
 GO_VERSION := $(shell $(GO) env GOVERSION | sed 's/go//' | cut -d. -f1,2)
 
 .PHONY: help
-.PHONY: check build docker generate
+.PHONY: check build build-runiap build-runoauth docker docker-runiap docker-runoauth generate
 .PHONY: test lint fmt vet
-.PHONY: tidy clean run release-snapshot
+.PHONY: tidy clean run-runiap run-runoauth release-snapshot
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -20,12 +20,21 @@ check: generate fmt vet lint test ## Run local quality checks
 generate: ## Generate templ Go code from .templ files
 	$(GO) tool templ generate
 
-build: generate ## Build server binary
-	mkdir -p $(BIN_DIR)
-	$(GO) build -o $(BIN_DIR)/runiap .
+build: generate build-runiap build-runoauth ## Build all binaries
 
-run: build ## Run server locally
+build-runiap: ## Build runiap binary
+	mkdir -p $(BIN_DIR)
+	$(GO) build -o $(BIN_DIR)/runiap ./cmd/runiap
+
+build-runoauth: ## Build runoauth binary
+	mkdir -p $(BIN_DIR)
+	$(GO) build -o $(BIN_DIR)/runoauth ./cmd/runoauth
+
+run-runiap: build-runiap ## Run runiap locally
 	./$(BIN_DIR)/runiap
+
+run-runoauth: build-runoauth ## Run runoauth locally
+	./$(BIN_DIR)/runoauth
 
 test: ## Run tests with race detector
 	$(GO) test -race ./...
@@ -47,8 +56,13 @@ tidy: ## Tidy go modules
 clean: ## Remove build artifacts
 	rm -rf $(BIN_DIR)
 
-docker: ## Build container image
+docker: docker-runiap docker-runoauth ## Build all container images
+
+docker-runiap: ## Build runiap container image
 	docker build --build-arg GO_VERSION=$(GO_VERSION) -t runiap .
+
+docker-runoauth: ## Build runoauth container image
+	docker build --build-arg GO_VERSION=$(GO_VERSION) -t runoauth .
 
 release-snapshot: ## Test goreleaser locally (no publish)
 	goreleaser release --snapshot --clean
