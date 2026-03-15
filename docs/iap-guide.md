@@ -43,11 +43,10 @@
 ## Quick Start
 
 ```bash
-cd cmd/runiap
-./deploy-iap.sh runiap
+./cmd/runiap/deploy-iap.sh runiap
 ```
 
-The script enables APIs, builds from source, deploys to Cloud Run, enables IAP, restricts access to `@myowndomain.com`, and sets the correct `IAP_AUDIENCE` environment variable.
+The script generates templ code, builds with [ko](https://ko.build/), pushes to Artifact Registry, deploys to Cloud Run with IAP enabled, restricts access to `@myowndomain.com`, and sets the correct `IAP_AUDIENCE` environment variable.
 
 ---
 
@@ -87,47 +86,32 @@ Cloud Run's native IAP integration (the `--iap` flag) does this without needing 
 
 - [Google Cloud SDK (`gcloud`)](https://cloud.google.com/sdk/docs/install) installed and authenticated
 - A GCP project with billing enabled
-- Your app has a `Dockerfile` in the root directory
-- Docker is **not** required locally — Cloud Build handles the build
-
-### One-Time Project Setup
-
-Before your first source deploy, grant Cloud Build permission to read source archives:
-
-```bash
-./setup-cloud-build.sh
-```
-
-This enables the required APIs (`run`, `cloudbuild`, `artifactregistry`) and grants the default compute service account `storage.objectViewer` so Cloud Build can access your uploaded source.
-
-You only need to run this once per GCP project.
+- [ko](https://ko.build/) installed (`go install github.com/google/ko@latest`)
+- Docker is **not** required locally — ko builds Go images directly
 
 ### Deploy with IAP
 
 ```bash
-./deploy-iap.sh <service-name> [--region <region>] [--source <path>] [--port <port>]
+./cmd/runiap/deploy-iap.sh <service-name> [--region <region>] [--port <port>]
 ```
 
 **Examples:**
 
 ```bash
-# Deploy from current directory with defaults (us-central1, port 8080)
-./deploy-iap.sh myapp
+# Deploy with defaults (us-central1, port 8080)
+./cmd/runiap/deploy-iap.sh runiap
 
 # Deploy with custom region and port
-./deploy-iap.sh myapp --region europe-west1 --port 3000
-
-# Deploy from a subdirectory
-./deploy-iap.sh myapp --source ./backend
+./cmd/runiap/deploy-iap.sh runiap --region europe-west1 --port 3000
 ```
 
 **What the script does (6 steps):**
 
 | Step | Command | Purpose |
 |------|---------|---------|
-| 1 | `gcloud services enable ...` | Enable IAP, Cloud Run, Cloud Build, Artifact Registry APIs |
-| 2 | `gcloud projects add-iam-policy-binding ...` | Grant compute SA storage access for Cloud Build |
-| 3 | `gcloud run deploy --source . --iap ...` | Build from Dockerfile, deploy with IAP enabled |
+| 1 | `gcloud services enable ...` | Enable IAP, Cloud Run, Artifact Registry APIs |
+| 2 | `templ generate` + `ko build` | Generate templ code, build Go image with ko, push to Artifact Registry |
+| 3 | `gcloud run deploy --image ... --iap` | Deploy the ko-built image with IAP enabled |
 | 4 | `gcloud run services add-iam-policy-binding ...` | Let the IAP service agent invoke your Cloud Run service |
 | 5 | `gcloud iap web add-iam-policy-binding ...` | Restrict IAP access to `@myowndomain.com` |
 | 6 | `gcloud run services update --update-env-vars ...` | Set `IAP_AUDIENCE` for JWT verification |
@@ -142,15 +126,27 @@ If you prefer to run the steps manually or need to customize them:
 gcloud services enable \
   iap.googleapis.com \
   run.googleapis.com \
-  cloudbuild.googleapis.com \
   artifactregistry.googleapis.com
 ```
 
-#### 2. Deploy from source with IAP
+#### 2. Build and push the image with ko
 
 ```bash
+# Generate templ code first
+go tool templ generate
+
+# Build and push (set KO_DOCKER_REPO to your Artifact Registry including image name)
+PROJECT_ID=$(gcloud config get-value project)
+export KO_DOCKER_REPO="us-central1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/runiap"
+ko build ./cmd/runiap --bare --platform=linux/amd64
+```
+
+#### 3. Deploy the image with IAP
+
+```bash
+IMAGE="${KO_DOCKER_REPO}"
 gcloud run deploy myapp \
-  --source . \
+  --image="$IMAGE" \
   --region=us-central1 \
   --no-allow-unauthenticated \
   --iap \
@@ -158,11 +154,11 @@ gcloud run deploy myapp \
 ```
 
 Key flags:
-- `--source .` — Cloud Build builds your Dockerfile remotely (no local Docker needed)
+- `--image` — deploy the ko-built image from Artifact Registry
 - `--no-allow-unauthenticated` — blocks direct access without authentication
 - `--iap` — enables IAP as a sidecar on the Cloud Run service
 
-#### 3. Grant IAP service agent the invoker role
+#### 4. Grant IAP service agent the invoker role
 
 IAP needs permission to forward requests to your Cloud Run service:
 
@@ -177,7 +173,7 @@ gcloud run services add-iam-policy-binding myapp \
 
 Without this, IAP can authenticate users but can't forward their requests — you'll see 403 errors even for authorized users.
 
-#### 4. Set the IAM policy for who can access
+#### 5. Set the IAM policy for who can access
 
 Grant access to a domain, group, or individual:
 
@@ -207,7 +203,7 @@ gcloud iap web add-iam-policy-binding \
   --service=myapp
 ```
 
-#### 5. Set the IAP_AUDIENCE environment variable
+#### 6. Set the IAP_AUDIENCE environment variable
 
 Your app needs this to verify JWT signatures:
 
@@ -628,22 +624,6 @@ gcloud run services add-iam-policy-binding myapp \
   --region=us-central1 \
   --member=serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com \
   --role=roles/run.invoker
-```
-
-### Cloud Build fails with storage permission error
-
-Run the one-time setup:
-```bash
-./setup-cloud-build.sh
-```
-
-Or manually grant the permission:
-```bash
-PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format='value(projectNumber)')
-gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-  --member=serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com \
-  --role=roles/storage.objectViewer \
-  --condition=None --quiet
 ```
 
 ### IAP headers not appearing

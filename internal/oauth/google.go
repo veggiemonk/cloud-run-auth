@@ -151,7 +151,7 @@ func fetchUserInfo(ctx context.Context, cfg *oauth2.Config, token *oauth2.Token)
 	if err != nil {
 		return nil, fmt.Errorf("userinfo request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("userinfo returned status %d", resp.StatusCode)

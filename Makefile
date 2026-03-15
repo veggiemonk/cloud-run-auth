@@ -6,6 +6,7 @@ GO_VERSION := $(shell $(GO) env GOVERSION | sed 's/go//' | cut -d. -f1,2)
 
 .PHONY: help
 .PHONY: check build build-runiap build-runoauth docker docker-runiap docker-runoauth generate
+.PHONY: ko ko-runiap ko-runoauth
 .PHONY: test lint fmt vet
 .PHONY: tidy clean run-runiap run-runoauth release-snapshot
 
@@ -59,10 +60,18 @@ clean: ## Remove build artifacts
 docker: docker-runiap docker-runoauth ## Build all container images
 
 docker-runiap: ## Build runiap container image
-	docker build --build-arg GO_VERSION=$(GO_VERSION) -t runiap .
+	docker build --build-arg GO_VERSION=$(GO_VERSION) -f cmd/runiap/Dockerfile -t runiap .
 
 docker-runoauth: ## Build runoauth container image
-	docker build --build-arg GO_VERSION=$(GO_VERSION) -t runoauth .
+	docker build --build-arg GO_VERSION=$(GO_VERSION) -f cmd/runoauth/Dockerfile -t runoauth .
+
+ko: ko-runiap ko-runoauth ## Build all images with ko
+
+ko-runiap: generate ## Build runiap image with ko
+	ko build ./cmd/runiap --bare --platform=linux/amd64
+
+ko-runoauth: generate ## Build runoauth image with ko
+	ko build ./cmd/runoauth --bare --platform=linux/amd64
 
 release-snapshot: ## Test goreleaser locally (no publish)
 	goreleaser release --snapshot --clean

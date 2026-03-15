@@ -53,13 +53,12 @@
 ## Quick Start
 
 ```bash
-cd cmd/runoauth
-./deploy-oauth.sh runoauth
+./cmd/runoauth/deploy-oauth.sh runoauth --secret-name internal-tools-google-oauth-secret
 ```
 
-The script enables APIs, deploys to Cloud Run, prompts for your OAuth client ID and secret, sets environment variables, and prints the redirect URI to add to your OAuth credentials.
+The script generates templ code, builds with [ko](https://ko.build/), pushes to Artifact Registry, deploys to Cloud Run, reads OAuth credentials from Secret Manager (or prompts interactively), and prints the redirect URI to add to your OAuth credentials.
 
-> **Note:** You must first create OAuth credentials in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials). The deploy script walks you through this.
+> **Note:** You must first create OAuth credentials in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials). You can store them in Secret Manager for automated deploys, or the script will prompt interactively.
 
 ---
 
@@ -115,7 +114,9 @@ With OAuth on Cloud Run:
 - [Google Cloud SDK (`gcloud`)](https://cloud.google.com/sdk/docs/install) installed and authenticated
 - A GCP project with billing enabled
 - OAuth 2.0 credentials (Client ID + Client Secret) — [see below](#creating-oauth-credentials)
-- Docker is **not** required locally — Cloud Build handles the build
+- [ko](https://ko.build/) installed (`go install github.com/google/ko@latest`)
+- [`jq`](https://jqlang.github.io/jq/) installed (only needed with `--secret-name` for Secret Manager)
+- Docker is **not** required locally — ko builds Go images directly
 
 ### Creating OAuth Credentials
 
@@ -130,32 +131,47 @@ Before deploying, you need OAuth 2.0 credentials:
 
 > **First-time setup:** If you haven't configured the OAuth consent screen yet, Google will prompt you. Choose **Internal** (for Google Workspace) or **External** (for any Google account). For testing, **External** in "Testing" mode works fine — you'll need to add test users manually.
 
+**Optional: Store credentials in Secret Manager** for automated deploys:
+
+```bash
+# Download the OAuth client JSON from the Credentials page, then:
+gcloud secrets create my-oauth-secret --data-file=client_secret_*.json
+```
+
+Then use `--secret-name my-oauth-secret` when deploying instead of entering credentials interactively.
+
 ### Deploy with OAuth
 
 ```bash
-./cmd/runoauth/deploy-oauth.sh <service-name> [--region <region>]
+./cmd/runoauth/deploy-oauth.sh <service-name> [--region <region>] [--secret-name <name>]
 ```
 
 **Examples:**
 
 ```bash
-# Deploy with defaults (us-central1)
+# Deploy with defaults (us-central1), prompt for credentials
 ./cmd/runoauth/deploy-oauth.sh myapp
+
+# Deploy with credentials from Secret Manager
+./cmd/runoauth/deploy-oauth.sh myapp --secret-name internal-tools-google-oauth-secret
 
 # Deploy to a specific region
 ./cmd/runoauth/deploy-oauth.sh myapp --region europe-west1
 ```
 
-**What the script does (4 steps):**
+**What the script does (5 steps):**
 
 | Step | Command | Purpose |
 |------|---------|---------|
-| 1 | `gcloud services enable ...` | Enable Cloud Run, Cloud Build, Artifact Registry APIs |
-| 2 | Interactive prompt | Collect OAuth Client ID and Client Secret |
-| 3 | `gcloud run deploy --allow-unauthenticated ...` | Build and deploy (app handles auth) |
-| 4 | `gcloud run services update --set-env-vars ...` | Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `OAUTH_REDIRECT_URL` |
+| 1 | `gcloud services enable ...` | Enable Cloud Run, Artifact Registry, Secret Manager APIs |
+| 2 | Secret Manager read or interactive prompt | Get OAuth Client ID and Client Secret |
+| 3 | `templ generate` + `ko build` | Generate templ code, build Go image with ko, push to Artifact Registry |
+| 4 | `gcloud run deploy --image ... --set-env-vars ...` | Deploy ko-built image with env vars (app handles auth) |
+| 5 | Verify URL | If the actual service URL differs from predicted, update `OAUTH_REDIRECT_URL` |
 
 After deployment, the script prints the redirect URI. You **must** add it to your OAuth credentials in the Console, or the callback will fail.
+
+> **Secret Manager format:** When using `--secret-name`, the secret must contain the OAuth client JSON downloaded from the Google Cloud Console: `{"web": {"client_id": "...", "client_secret": "..."}}`. The script uses `jq` to parse it.
 
 ### Step-by-Step Manual Deployment
 
@@ -164,42 +180,50 @@ After deployment, the script prints the redirect URI. You **must** add it to you
 ```bash
 gcloud services enable \
   run.googleapis.com \
-  cloudbuild.googleapis.com \
   artifactregistry.googleapis.com
 ```
 
-#### 2. Deploy from source
+#### 2. Build and push the image with ko
 
 ```bash
+# Generate templ code first
+go tool templ generate
+
+# Build and push (set KO_DOCKER_REPO to your Artifact Registry including image name)
+PROJECT_ID=$(gcloud config get-value project)
+export KO_DOCKER_REPO="us-central1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/runoauth"
+ko build ./cmd/runoauth --bare --platform=linux/amd64
+```
+
+#### 3. Deploy the image with environment variables
+
+```bash
+IMAGE="${KO_DOCKER_REPO}"
+SERVICE_URL="https://myapp-$(gcloud projects describe $(gcloud config get-value project) --format='value(projectNumber)').us-central1.run.app"
+
 gcloud run deploy myapp \
-  --source . \
+  --image="$IMAGE" \
   --region=us-central1 \
   --allow-unauthenticated \
-  --port=8080
+  --port=8080 \
+  --set-env-vars="GOOGLE_CLIENT_ID=xxx,GOOGLE_CLIENT_SECRET=yyy,OAUTH_REDIRECT_URL=${SERVICE_URL}/auth/callback"
 ```
 
 Key flags:
-- `--source .` — Cloud Build builds your Dockerfile remotely
+- `--image` — deploy the ko-built image from Artifact Registry
 - `--allow-unauthenticated` — **required** for OAuth apps (the app handles auth itself)
+- `--set-env-vars` — set OAuth credentials and redirect URL in the same deploy to avoid startup failures
 
-#### 3. Get the service URL
+#### 4. Get the redirect URI
 
 ```bash
 SERVICE_URL=$(gcloud run services describe myapp --region=us-central1 --format='value(status.url)')
 echo "Redirect URI: ${SERVICE_URL}/auth/callback"
 ```
 
-#### 4. Add the redirect URI to your OAuth credentials
+#### 5. Add the redirect URI to your OAuth credentials
 
 Go to the [Credentials page](https://console.cloud.google.com/apis/credentials), edit your OAuth client, and add `${SERVICE_URL}/auth/callback` as an authorized redirect URI.
-
-#### 5. Set environment variables
-
-```bash
-gcloud run services update myapp \
-  --region=us-central1 \
-  --set-env-vars="GOOGLE_CLIENT_ID=xxx,GOOGLE_CLIENT_SECRET=yyy,OAUTH_REDIRECT_URL=${SERVICE_URL}/auth/callback"
-```
 
 ---
 

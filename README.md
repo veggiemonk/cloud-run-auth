@@ -46,11 +46,10 @@ Demonstrates IAP-based authentication where Google manages login and your app re
 **Deploy:**
 
 ```bash
-./setup-cloud-build.sh          # one-time: enable APIs, grant Cloud Build permissions
-./cmd/runiap/deploy-iap.sh myapp
+./cmd/runiap/deploy-iap.sh runiap
 ```
 
-The deploy script enables IAP, builds from source, deploys to Cloud Run, restricts access to your domain, and sets the `IAP_AUDIENCE` environment variable for JWT verification.
+The deploy script generates templ code, builds with ko, pushes to Artifact Registry, deploys to Cloud Run with IAP enabled, restricts access to your domain, and sets the `IAP_AUDIENCE` environment variable for JWT verification.
 
 **What it demonstrates:**
 - IAP header inspection (`X-Goog-IAP-JWT-Assertion`, `X-Goog-Authenticated-User-Email`)
@@ -68,8 +67,7 @@ Demonstrates OAuth-based authentication where the app manages the full OAuth 2.0
 **Deploy:**
 
 ```bash
-./setup-cloud-build.sh           # one-time: enable APIs, grant Cloud Build permissions
-./cmd/runoauth/deploy-oauth.sh myapp
+./cmd/runoauth/deploy-oauth.sh runoauth --secret-name internal-tools-google-oauth-secret
 ```
 
 **What it demonstrates:**

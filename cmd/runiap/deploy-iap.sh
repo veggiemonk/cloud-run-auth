@@ -1,23 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Deploy a Cloud Run service from source with IAP restricted to @myowndomain.com
+# Deploy a Cloud Run service with IAP using ko (no Dockerfile needed)
 #
 # Usage:
-#   ./deploy-iap.sh <service-name> [--region <region>] [--source <path>] [--port <port>]
+#   ./deploy-iap.sh <service-name> [--region <region>] [--port <port>]
 #
 # Examples:
-#   ./deploy-iap.sh myapp
-#   ./deploy-iap.sh myapp --region us-east1 --source ./app --port 3000
+#   ./deploy-iap.sh runiap
+#   ./deploy-iap.sh runiap --region us-east1 --port 3000
 
 # --- Defaults ---
 REGION="us-central1"
-SOURCE="."
 PORT="8080"
 
 # --- Parse arguments ---
 if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 <service-name> [--region <region>] [--source <path>] [--port <port>]"
+  echo "Usage: $0 <service-name> [--region <region>] [--port <port>]"
   exit 1
 fi
 
@@ -27,7 +26,6 @@ shift
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --region) REGION="$2"; shift 2 ;;
-    --source) SOURCE="$2"; shift 2 ;;
     --port)   PORT="$2";   shift 2 ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
@@ -36,10 +34,9 @@ done
 PROJECT_ID=$(gcloud config get-value project 2>/dev/null)
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
 
-echo "=== Deploying $SERVICE_NAME to Cloud Run with IAP ==="
+echo "=== Deploying $SERVICE_NAME to Cloud Run with IAP (via ko) ==="
 echo "  Project:  $PROJECT_ID ($PROJECT_NUMBER)"
 echo "  Region:   $REGION"
-echo "  Source:   $SOURCE"
 echo "  Port:     $PORT"
 echo ""
 
@@ -48,22 +45,23 @@ echo ">>> Step 1: Enabling required APIs..."
 gcloud services enable \
   iap.googleapis.com \
   run.googleapis.com \
-  cloudbuild.googleapis.com \
   artifactregistry.googleapis.com
 
-# --- Step 2: Grant storage access to compute service account ---
-# Cloud Build needs this to read/write source archives
-echo ">>> Step 2: Granting storage access to compute service account..."
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
-  --role=roles/storage.objectViewer \
-  --condition=None \
-  --quiet > /dev/null
+# --- Step 2: Generate templ code and build with ko ---
+REPO_ROOT=$(git rev-parse --show-toplevel)
+IMAGE="us-central1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/runiap"
 
-# --- Step 3: Deploy from source with IAP enabled ---
-echo ">>> Step 3: Deploying from source (this may take a few minutes)..."
+echo ">>> Step 2: Generating templ code..."
+cd "$REPO_ROOT"
+go tool templ generate
+
+echo ">>> Step 2b: Building and pushing image with ko..."
+KO_DOCKER_REPO="$IMAGE" ko build ./cmd/runiap --bare --platform=linux/amd64
+
+# --- Step 3: Deploy the image with IAP enabled ---
+echo ">>> Step 3: Deploying image to Cloud Run with IAP..."
 gcloud run deploy "$SERVICE_NAME" \
-  --source "$SOURCE" \
+  --image="$IMAGE" \
   --region="$REGION" \
   --no-allow-unauthenticated \
   --iap \
