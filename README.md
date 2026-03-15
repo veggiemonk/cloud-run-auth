@@ -61,7 +61,7 @@ The deploy script enables IAP, builds from source, deploys to Cloud Run, restric
 
 ### RunOAuth — OAuth 2.0 on Cloud Run
 
-**Directory:** [`cmd/runoauth/`](cmd/runoauth/)
+**Directory:** [`cmd/runoauth/`](cmd/runoauth/) | **In-depth guide:** [`docs/oauth-guide.md`](docs/oauth-guide.md)
 
 Demonstrates OAuth-based authentication where the app manages the full OAuth 2.0 authorization code flow. The app obtains access tokens that can call GCP APIs on behalf of the authenticated user.
 
