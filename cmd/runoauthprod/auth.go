@@ -29,11 +29,12 @@ type userInfoResponse struct {
 
 // authDeps holds shared dependencies for auth handlers.
 type authDeps struct {
-	oauthCfg *oauth2.Config
-	store    *session.Store
-	cookies  CookieConfig
-	csrf     *middleware.CSRF
-	sfGroup  singleflight.Group
+	oauthCfg      *oauth2.Config
+	store         *session.Store
+	cookies       CookieConfig
+	csrf          *middleware.CSRF
+	allowedDomain string
+	sfGroup       singleflight.Group
 }
 
 // prodLoginHandler redirects to Google OAuth with domain hint.
@@ -45,7 +46,7 @@ func (d *authDeps) prodLoginHandler() http.HandlerFunc {
 
 		url := d.oauthCfg.AuthCodeURL(state,
 			oauth2.AccessTypeOffline,
-			oauth2.SetAuthURLParam("hd", AllowedDomain),
+			oauth2.SetAuthURLParam("hd", d.allowedDomain),
 		)
 		http.Redirect(w, r, url, http.StatusFound)
 	}
@@ -100,9 +101,9 @@ func (d *authDeps) prodCallbackHandler() http.HandlerFunc {
 		}
 
 		// Verify domain.
-		if info.HD != AllowedDomain {
+		if info.HD != d.allowedDomain {
 			slog.Warn("domain mismatch", "email", info.Email, "hd", info.HD)
-			http.Error(w, "Access restricted to "+AllowedDomain+" accounts", http.StatusForbidden)
+			http.Error(w, "Access restricted to "+d.allowedDomain+" accounts", http.StatusForbidden)
 			return
 		}
 

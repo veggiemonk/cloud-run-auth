@@ -23,67 +23,32 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	// Required env vars.
-	clientID := os.Getenv("GOOGLE_CLIENT_ID")
-	clientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
-	redirectURL := os.Getenv("OAUTH_REDIRECT_URL")
-	projectID := os.Getenv("PROJECT_ID")
-	encKeyB64 := os.Getenv("SESSION_ENCRYPTION_KEY")
+	cfg := MustParse()
 
-	if clientID == "" || clientSecret == "" {
-		slog.Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set")
-		os.Exit(1)
-	}
-	if projectID == "" {
-		slog.Error("PROJECT_ID must be set")
-		os.Exit(1)
-	}
-	if encKeyB64 == "" {
-		slog.Error("SESSION_ENCRYPTION_KEY must be set (base64-encoded 32-byte key)")
-		os.Exit(1)
-	}
-
-	encKey, err := base64.StdEncoding.DecodeString(encKeyB64)
+	// Decode encryption key (base64 → raw bytes).
+	encKey, err := base64.StdEncoding.DecodeString(cfg.SessionEncryptionKey)
 	if err != nil || len(encKey) != 32 {
 		slog.Error("SESSION_ENCRYPTION_KEY must be a base64-encoded 32-byte key")
 		os.Exit(1)
 	}
 
-	if redirectURL == "" {
-		redirectURL = "http://localhost:8080/auth/callback"
-		slog.Warn("OAUTH_REDIRECT_URL not set, using default", "url", redirectURL)
-	}
-
-	databaseID := os.Getenv("FIRESTORE_DATABASE")
-	if databaseID == "" {
-		databaseID = "(default)"
-	}
-
-	kRevision := os.Getenv("K_REVISION")
-	csrfKeyB64 := os.Getenv("CSRF_KEY")
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
 	// Initialize Firestore session store with encryption.
 	ctx := context.Background()
-	store, err := session.NewStore(ctx, projectID, databaseID, encKey)
+	store, err := session.NewStore(ctx, cfg.ProjectID, cfg.FirestoreDB, encKey)
 	if err != nil {
 		slog.Error("failed to initialize session store", "error", err)
 		os.Exit(1)
 	}
 	defer store.Close()
 
-	// Create OAuth config (reuse existing package).
-	cfg := newGoogleConfig(clientID, clientSecret, redirectURL)
+	// Create OAuth config.
+	oauthCfg := newGoogleConfig(cfg.Google.ClientID, cfg.Google.ClientSecret, cfg.Google.RedirectURL)
 
 	// Cookie config (production vs dev).
-	cookies := NewCookieConfig(kRevision)
+	cookies := NewCookieConfig(cfg.KRevision)
 
 	// CSRF protection.
-	csrf, err := middleware.NewCSRF(csrfKeyB64)
+	csrf, err := middleware.NewCSRF(cfg.CSRFKey)
 	if err != nil {
 		slog.Error("failed to initialize CSRF", "error", err)
 		os.Exit(1)
@@ -91,15 +56,16 @@ func main() {
 
 	// Auth dependencies.
 	deps := &authDeps{
-		oauthCfg: cfg,
-		store:    store,
-		cookies:  cookies,
-		csrf:     csrf,
+		oauthCfg:      oauthCfg,
+		store:         store,
+		cookies:       cookies,
+		csrf:          csrf,
+		allowedDomain: cfg.AllowedDomain,
 	}
 
 	// Rate limiters.
-	authLimiter := middleware.NewIPRateLimiter(AuthRateLimitBurst, time.Minute)
-	userLimiter := middleware.NewUserRateLimiter(UserRateLimitBurst, time.Minute, deps.emailFromSession)
+	authLimiter := middleware.NewIPRateLimiter(cfg.AuthRateLimitBurst, time.Minute)
+	userLimiter := middleware.NewUserRateLimiter(cfg.UserRateLimitBurst, time.Minute, deps.emailFromSession)
 
 	// Request log buffer.
 	buf := reqlog.NewBuffer()
@@ -156,14 +122,14 @@ func main() {
 	)
 
 	srv := &http.Server{
-		Addr:              ":" + port,
+		Addr:              ":" + cfg.Port,
 		Handler:           handler,
 		ReadTimeout:       ReadTimeout,
 		ReadHeaderTimeout: ReadHeaderTimeout,
 		IdleTimeout:       IdleTimeout,
 	}
 
-	slog.Info("starting production OAuth server", "port", port, "secure", cookies.Secure)
+	slog.Info("starting production OAuth server", "port", cfg.Port, "secure", cookies.Secure)
 	if err := srv.ListenAndServe(); err != nil {
 		slog.Error("server failed", "error", err)
 		os.Exit(1)
