@@ -7,7 +7,7 @@ GO_VERSION := $(shell $(GO) env GOVERSION | sed 's/go//' | cut -d. -f1,2)
 .PHONY: help
 .PHONY: check build docker generate
 .PHONY: test lint fmt vet
-.PHONY: tidy clean run
+.PHONY: tidy clean run release-snapshot
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -49,3 +49,15 @@ clean: ## Remove build artifacts
 
 docker: ## Build container image
 	docker build --build-arg GO_VERSION=$(GO_VERSION) -t runiap .
+
+release-snapshot: ## Test goreleaser locally (no publish)
+	goreleaser release --snapshot --clean
+
+update: update-dep update-ga ## Update everything
+
+update-dep: ## Update dependencies and vendor
+	$(GO) get -u go@latest
+	$(GO) get -u ./...
+
+update-ga: ## Update pinned GitHub Actions workflow versions (ratchet)
+	ratchet upgrade .github/workflows/release.yml

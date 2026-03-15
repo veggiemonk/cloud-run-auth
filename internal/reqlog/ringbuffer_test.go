@@ -38,7 +38,7 @@ func TestBuffer_Wraparound(t *testing.T) {
 	buf := NewBuffer()
 
 	// Fill beyond capacity to trigger wraparound.
-	for i := 0; i < maxEntries+50; i++ {
+	for i := range maxEntries + 50 {
 		buf.Add(Entry{
 			Method: "GET",
 			Path:   fmt.Sprintf("/%d", i),
@@ -68,11 +68,11 @@ func TestBuffer_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Concurrent writers.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < 100; j++ {
+			for j := range 100 {
 				buf.Add(Entry{
 					Timestamp: time.Now(),
 					Method:    "GET",
@@ -83,14 +83,12 @@ func TestBuffer_ConcurrentAccess(t *testing.T) {
 	}
 
 	// Concurrent readers.
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 100; j++ {
+	for range 5 {
+		wg.Go(func() {
+			for range 100 {
 				_ = buf.Entries()
 			}
-		}()
+		})
 	}
 
 	wg.Wait()
