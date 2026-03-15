@@ -6,5 +6,6 @@
 /bin
 # go build output
 /runiap
+/runoauth
 # templ generated files
 *_templ.go
