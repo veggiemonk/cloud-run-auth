@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"golang.org/x/oauth2"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/option"
 
@@ -24,7 +23,7 @@ func GCPExplorer() http.HandlerFunc {
 
 		data := oauthui.GCPData{}
 
-		ts := oauth2.StaticTokenSource(user.Token)
+		ts := user.OAuthConfig.TokenSource(r.Context(), user.Token)
 		svc, err := cloudresourcemanager.NewService(r.Context(), option.WithTokenSource(ts))
 		if err != nil {
 			data.Error = "Failed to create GCP client: " + err.Error()

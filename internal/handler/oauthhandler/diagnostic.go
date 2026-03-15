@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"golang.org/x/oauth2"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/option"
 
@@ -96,7 +95,7 @@ func Diagnostic() http.HandlerFunc {
 
 		// Check 4: GCP API reachable?
 		if user.Token != nil {
-			ts := oauth2.StaticTokenSource(user.Token)
+			ts := user.OAuthConfig.TokenSource(r.Context(), user.Token)
 			svc, err := cloudresourcemanager.NewService(r.Context(), option.WithTokenSource(ts))
 			if err != nil {
 				checks = append(checks, oauthui.Check{

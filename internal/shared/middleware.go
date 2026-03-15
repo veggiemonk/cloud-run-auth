@@ -42,6 +42,8 @@ func LoggingMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 // authType is the authentication type string (e.g., "iap", "oauth", "").
 func RequestLogMiddleware(buf *reqlog.Buffer, emailExtractor func(*http.Request) string, authType string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r)
+
 		email := ""
 		if emailExtractor != nil {
 			email = emailExtractor(r)
@@ -55,7 +57,5 @@ func RequestLogMiddleware(buf *reqlog.Buffer, emailExtractor func(*http.Request)
 			AuthType:   authType,
 			RemoteAddr: r.RemoteAddr,
 		})
-
-		next.ServeHTTP(w, r)
 	})
 }

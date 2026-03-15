@@ -41,6 +41,7 @@ func LoginHandler(cfg *oauth2.Config, sessions *SessionStore) http.HandlerFunc {
 			Path:     "/",
 			MaxAge:   600, // 10 minutes
 			HttpOnly: true,
+			Secure:   true,
 			SameSite: http.SameSiteLaxMode,
 		})
 
@@ -78,6 +79,7 @@ func CallbackHandler(cfg *oauth2.Config, sessions *SessionStore) http.HandlerFun
 			Path:     "/",
 			MaxAge:   -1,
 			HttpOnly: true,
+			Secure:   true,
 		})
 
 		// Check for error from OAuth provider.
@@ -116,6 +118,7 @@ func CallbackHandler(cfg *oauth2.Config, sessions *SessionStore) http.HandlerFun
 			Value:    session.ID,
 			Path:     "/",
 			HttpOnly: true,
+			Secure:   true,
 			SameSite: http.SameSiteLaxMode,
 		})
 
@@ -136,6 +139,7 @@ func LogoutHandler(sessions *SessionStore) http.HandlerFunc {
 			Path:     "/",
 			MaxAge:   -1,
 			HttpOnly: true,
+			Secure:   true,
 		})
 
 		http.Redirect(w, r, "/auth/login", http.StatusFound)

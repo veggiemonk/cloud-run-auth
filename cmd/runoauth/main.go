@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/veggiemonk/cloud-run-auth/internal/assets"
 	"github.com/veggiemonk/cloud-run-auth/internal/handler/oauthhandler"
@@ -32,7 +33,8 @@ func main() {
 	}
 
 	cfg := oauth.NewGoogleConfig(clientID, clientSecret, redirectURL)
-	sessions := oauth.NewSessionStore()
+	sessions := oauth.NewSessionStore(cfg)
+	sessions.StartCleanup(5 * time.Minute)
 	buf := reqlog.NewBuffer()
 
 	mux := http.NewServeMux()
@@ -61,12 +63,18 @@ func main() {
 	protected.Handle("GET /diagnostic", oauthhandler.Diagnostic())
 	mux.Handle("/", oauth.RequireAuth(sessions, protected))
 
-	// OAuth-specific email extractor for request log middleware.
+	// OAuth-specific email extractor reads directly from session store via cookie,
+	// so it works regardless of middleware ordering.
 	oauthEmailExtractor := func(r *http.Request) string {
-		if user := oauth.UserFromContext(r.Context()); user != nil {
-			return user.Email
+		cookie, err := r.Cookie("session_id")
+		if err != nil {
+			return ""
 		}
-		return ""
+		session := sessions.Get(cookie.Value)
+		if session == nil {
+			return ""
+		}
+		return session.Email
 	}
 
 	wrapped := shared.LoggingMiddleware(logger, shared.RequestLogMiddleware(buf, oauthEmailExtractor, "oauth", mux))

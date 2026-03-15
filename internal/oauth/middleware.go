@@ -13,10 +13,11 @@ const userContextKey contextKey = "oauth_user"
 
 // UserInfo holds the authenticated user's information.
 type UserInfo struct {
-	Email   string
-	Name    string
-	Picture string
-	Token   *oauth2.Token
+	Email       string
+	Name        string
+	Picture     string
+	Token       *oauth2.Token
+	OAuthConfig *oauth2.Config
 }
 
 // RequireAuth is middleware that ensures the user has a valid session.
@@ -36,10 +37,11 @@ func RequireAuth(sessions *SessionStore, next http.Handler) http.Handler {
 		}
 
 		user := &UserInfo{
-			Email:   session.Email,
-			Name:    session.Name,
-			Picture: session.Picture,
-			Token:   session.Token,
+			Email:       session.Email,
+			Name:        session.Name,
+			Picture:     session.Picture,
+			Token:       session.Token,
+			OAuthConfig: sessions.OAuthConfig,
 		}
 
 		ctx := WithUser(r.Context(), user)

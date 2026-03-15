@@ -3,6 +3,7 @@ package oauthhandler
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/veggiemonk/cloud-run-auth/internal/components/oauthui"
@@ -40,7 +41,7 @@ func Token() http.HandlerFunc {
 			if extra := user.Token.Extra("scope"); extra != nil {
 				if scopeStr, ok := extra.(string); ok && scopeStr != "" {
 					// Scopes are space-separated.
-					data.Scopes = splitScopes(scopeStr)
+					data.Scopes = strings.Fields(scopeStr)
 				}
 			}
 		}
@@ -54,24 +55,4 @@ func Token() http.HandlerFunc {
 			slog.Error("failed to render token page", "error", err)
 		}
 	}
-}
-
-// splitScopes splits a space-separated scope string into individual scopes.
-func splitScopes(s string) []string {
-	var scopes []string
-	current := ""
-	for _, c := range s {
-		if c == ' ' {
-			if current != "" {
-				scopes = append(scopes, current)
-				current = ""
-			}
-		} else {
-			current += string(c)
-		}
-	}
-	if current != "" {
-		scopes = append(scopes, current)
-	}
-	return scopes
 }

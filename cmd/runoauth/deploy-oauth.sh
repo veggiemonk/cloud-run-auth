@@ -109,17 +109,44 @@ if [[ -z "$SERVICE_URL" ]]; then
 fi
 REDIRECT_URL="${SERVICE_URL}/auth/callback"
 
-gcloud run deploy "$SERVICE_NAME" \
-  --image="$IMAGE" \
-  --region="$REGION" \
-  --allow-unauthenticated \
-  --port=8080 \
-  --cpu=1 \
-  --memory=256Mi \
-  --min-instances=0 \
-  --max-instances=3 \
-  --concurrency=80 \
-  --set-env-vars="GOOGLE_CLIENT_ID=${CLIENT_ID},GOOGLE_CLIENT_SECRET=${CLIENT_SECRET},OAUTH_REDIRECT_URL=${REDIRECT_URL}"
+if [[ -n "$SECRET_NAME" ]]; then
+  # Grant the Cloud Run service account access to the secret.
+  SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+  if [[ -z "${PROJECT_NUMBER:-}" ]]; then
+    PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+    SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+  fi
+  echo "  Granting secret access to ${SA}..."
+  gcloud secrets add-iam-policy-binding "$SECRET_NAME" \
+    --member="serviceAccount:${SA}" \
+    --role="roles/secretmanager.secretAccessor" \
+    --project="$PROJECT_ID" --quiet
+
+  gcloud run deploy "$SERVICE_NAME" \
+    --image="$IMAGE" \
+    --region="$REGION" \
+    --allow-unauthenticated \
+    --port=8080 \
+    --cpu=1 \
+    --memory=256Mi \
+    --min-instances=0 \
+    --max-instances=3 \
+    --concurrency=80 \
+    --set-env-vars="GOOGLE_CLIENT_ID=${CLIENT_ID},OAUTH_REDIRECT_URL=${REDIRECT_URL}" \
+    --set-secrets="GOOGLE_CLIENT_SECRET=${SECRET_NAME}:latest"
+else
+  gcloud run deploy "$SERVICE_NAME" \
+    --image="$IMAGE" \
+    --region="$REGION" \
+    --allow-unauthenticated \
+    --port=8080 \
+    --cpu=1 \
+    --memory=256Mi \
+    --min-instances=0 \
+    --max-instances=3 \
+    --concurrency=80 \
+    --set-env-vars="GOOGLE_CLIENT_ID=${CLIENT_ID},GOOGLE_CLIENT_SECRET=${CLIENT_SECRET},OAUTH_REDIRECT_URL=${REDIRECT_URL}"
+fi
 
 # --- Step 5: Verify service URL and update redirect if needed ---
 ACTUAL_URL=$(gcloud run services describe "$SERVICE_NAME" --region="$REGION" --format='value(status.url)')
