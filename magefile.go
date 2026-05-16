@@ -88,12 +88,12 @@ func Install() error {
 
 // Run tests with race
 func Test() error {
-	return runCmd("go", "test", "-race", "-count=1", "-shuffle=on", "-timeout=10m", "./...")
+	return runCmd("go", "test", "-race", "-shuffle=on", "-timeout=1m", "./...")
 }
 
 // Run tests verbose
 func TestV() error {
-	return runCmd("go", "test", "-race", "-count=1", "-shuffle=on", "-timeout=10m", "-v", "./...")
+	return runCmd("go", "test", "-race", "-shuffle=on", "-timeout=1m", "-v", "./...")
 }
 
 // Coverage report
