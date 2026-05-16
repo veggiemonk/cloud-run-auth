@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"golang.org/x/oauth2"
+
+	"github.com/veggiemonk/cloud-run-auth/internal/is"
 )
 
 func TestSessionStore_CreateAndGet(t *testing.T) {
@@ -14,20 +16,12 @@ func TestSessionStore_CreateAndGet(t *testing.T) {
 
 	session := store.Create("user@example.com", "Test User", "pic.jpg", token)
 
-	if session.ID == "" {
-		t.Fatal("expected session ID to be set")
-	}
-	if session.Email != "user@example.com" {
-		t.Errorf("expected email user@example.com, got %s", session.Email)
-	}
+	is.True(t, session.ID != "")
+	is.Equal(t, session.Email, "user@example.com", "")
 
 	got := store.Get(session.ID)
-	if got == nil {
-		t.Fatal("expected to retrieve session")
-	}
-	if got.Email != "user@example.com" {
-		t.Errorf("expected email user@example.com, got %s", got.Email)
-	}
+	is.True(t, got != nil)
+	is.Equal(t, got.Email, "user@example.com", "")
 }
 
 func TestSessionStore_Delete(t *testing.T) {
@@ -36,16 +30,12 @@ func TestSessionStore_Delete(t *testing.T) {
 
 	store.Delete(session.ID)
 
-	if got := store.Get(session.ID); got != nil {
-		t.Error("expected session to be deleted")
-	}
+	is.True(t, store.Get(session.ID) == nil)
 }
 
 func TestSessionStore_GetNonExistent(t *testing.T) {
 	store := NewSessionStore(nil)
-	if got := store.Get("nonexistent"); got != nil {
-		t.Error("expected nil for nonexistent session")
-	}
+	is.True(t, store.Get("nonexistent") == nil)
 }
 
 func TestSessionStore_ConcurrentAccess(t *testing.T) {
@@ -84,12 +74,8 @@ func TestSessionStore_Cleanup(t *testing.T) {
 	}
 	store.mu.Unlock()
 
-	if got := store.Get(session.ID); got != nil {
-		t.Error("expected old session to be evicted")
-	}
-	if got := store.Get(fresh.ID); got == nil {
-		t.Error("expected fresh session to still exist")
-	}
+	is.True(t, store.Get(session.ID) == nil)
+	is.True(t, store.Get(fresh.ID) != nil)
 }
 
 func TestSessionStore_MaxSessions(t *testing.T) {
@@ -100,14 +86,10 @@ func TestSessionStore_MaxSessions(t *testing.T) {
 		store.Create("user@example.com", "User", "", nil)
 	}
 
-	if store.Len() != maxSessions {
-		t.Fatalf("expected %d sessions, got %d", maxSessions, store.Len())
-	}
+	is.Equal(t, store.Len(), maxSessions, "filled to cap")
 
 	// Adding one more should evict the oldest and stay at cap.
 	store.Create("new@example.com", "New User", "", nil)
 
-	if store.Len() != maxSessions {
-		t.Errorf("expected %d sessions after overflow, got %d", maxSessions, store.Len())
-	}
+	is.Equal(t, store.Len(), maxSessions, "after overflow")
 }

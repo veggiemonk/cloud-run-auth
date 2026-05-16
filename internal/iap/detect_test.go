@@ -5,24 +5,18 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/veggiemonk/cloud-run-auth/internal/is"
 )
 
 func TestDetect_NoHeaders(t *testing.T) {
 	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	det := Detect(r)
 
-	if det.HasJWT {
-		t.Error("expected HasJWT=false with no headers")
-	}
-	if det.HasEmailHeader {
-		t.Error("expected HasEmailHeader=false with no headers")
-	}
-	if det.HasIDHeader {
-		t.Error("expected HasIDHeader=false with no headers")
-	}
-	if det.Warning != "" {
-		t.Errorf("expected no warning, got: %s", det.Warning)
-	}
+	is.True(t, !det.HasJWT)
+	is.True(t, !det.HasEmailHeader)
+	is.True(t, !det.HasIDHeader)
+	is.Equal(t, det.Warning, "", "")
 }
 
 func TestDetect_JWTOnly(t *testing.T) {
@@ -30,18 +24,11 @@ func TestDetect_JWTOnly(t *testing.T) {
 	r.Header.Set(HeaderJWTAssertion, "header.payload.signature")
 	det := Detect(r)
 
-	if !det.HasJWT {
-		t.Error("expected HasJWT=true")
-	}
-	if det.RawJWT != "header.payload.signature" {
-		t.Errorf("expected RawJWT to be set, got: %s", det.RawJWT)
-	}
-	if det.HasEmailHeader || det.HasIDHeader {
-		t.Error("expected no email/ID headers")
-	}
-	if det.Warning != "" {
-		t.Errorf("expected no warning, got: %s", det.Warning)
-	}
+	is.True(t, det.HasJWT)
+	is.Equal(t, det.RawJWT, "header.payload.signature", "")
+	is.True(t, !det.HasEmailHeader)
+	is.True(t, !det.HasIDHeader)
+	is.Equal(t, det.Warning, "", "")
 }
 
 func TestDetect_EmailAndIDWithoutJWT(t *testing.T) {
@@ -50,24 +37,12 @@ func TestDetect_EmailAndIDWithoutJWT(t *testing.T) {
 	r.Header.Set(HeaderAuthenticatedID, "accounts.google.com:12345")
 	det := Detect(r)
 
-	if det.HasJWT {
-		t.Error("expected HasJWT=false")
-	}
-	if !det.HasEmailHeader {
-		t.Error("expected HasEmailHeader=true")
-	}
-	if !det.HasIDHeader {
-		t.Error("expected HasIDHeader=true")
-	}
-	if det.Email != "user@example.com" {
-		t.Errorf("expected email prefix stripped, got: %s", det.Email)
-	}
-	if det.UserID != "12345" {
-		t.Errorf("expected user ID prefix stripped, got: %s", det.UserID)
-	}
-	if det.Warning == "" {
-		t.Error("expected bypass warning when headers present without JWT")
-	}
+	is.True(t, !det.HasJWT)
+	is.True(t, det.HasEmailHeader)
+	is.True(t, det.HasIDHeader)
+	is.Equal(t, det.Email, "user@example.com", "email prefix stripped")
+	is.Equal(t, det.UserID, "12345", "user ID prefix stripped")
+	is.True(t, det.Warning != "")
 }
 
 func TestDetect_AllHeaders(t *testing.T) {
@@ -77,12 +52,8 @@ func TestDetect_AllHeaders(t *testing.T) {
 	r.Header.Set(HeaderAuthenticatedID, "accounts.google.com:12345")
 	det := Detect(r)
 
-	if !det.HasJWT || !det.HasEmailHeader || !det.HasIDHeader {
-		t.Error("expected all header flags to be true")
-	}
-	if det.Warning != "" {
-		t.Error("expected no warning when JWT is present alongside headers")
-	}
+	is.True(t, det.HasJWT && det.HasEmailHeader && det.HasIDHeader)
+	is.Equal(t, det.Warning, "", "no warning when JWT present")
 }
 
 func TestDetect_EmailWithoutPrefix(t *testing.T) {
@@ -91,9 +62,7 @@ func TestDetect_EmailWithoutPrefix(t *testing.T) {
 	r.Header.Set(HeaderAuthenticatedEmail, "user@example.com")
 	det := Detect(r)
 
-	if det.Email != "user@example.com" {
-		t.Errorf("expected email unchanged without prefix, got: %s", det.Email)
-	}
+	is.Equal(t, det.Email, "user@example.com", "email unchanged without prefix")
 }
 
 func TestDetectionResult_RawJWTExcludedFromJSON(t *testing.T) {
@@ -104,16 +73,11 @@ func TestDetectionResult_RawJWTExcludedFromJSON(t *testing.T) {
 	}
 
 	b, err := json.Marshal(det)
-	if err != nil {
-		t.Fatalf("failed to marshal: %v", err)
-	}
+	is.NoErr(t, err)
 
 	var m map[string]any
-	if err := json.Unmarshal(b, &m); err != nil {
-		t.Fatalf("failed to unmarshal: %v", err)
-	}
+	is.NoErr(t, json.Unmarshal(b, &m))
 
-	if _, ok := m["raw_jwt"]; ok {
-		t.Error("RawJWT should not appear in JSON output (json:\"-\" tag)")
-	}
+	_, ok := m["raw_jwt"]
+	is.True(t, !ok)
 }

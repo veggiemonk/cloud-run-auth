@@ -7,47 +7,34 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/veggiemonk/cloud-run-auth/internal/is"
 	"github.com/veggiemonk/cloud-run-auth/internal/middleware"
 )
 
 func TestCSRF_TokenGeneration(t *testing.T) {
 	csrf, err := middleware.NewCSRF("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	is.NoErr(t, err)
 
 	token1 := csrf.Token("session-1")
 	token2 := csrf.Token("session-1")
-	if token1 != token2 {
-		t.Error("same session should produce same token")
-	}
+	is.Equal(t, token1, token2, "same session should produce same token")
 
 	token3 := csrf.Token("session-2")
-	if token1 == token3 {
-		t.Error("different sessions should produce different tokens")
-	}
+	is.True(t, token1 != token3)
 }
 
 func TestCSRF_ValidToken(t *testing.T) {
 	csrf, err := middleware.NewCSRF("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	is.NoErr(t, err)
 
 	token := csrf.Token("sess-abc")
-	if !csrf.ValidToken("sess-abc", token) {
-		t.Error("valid token rejected")
-	}
-	if csrf.ValidToken("sess-abc", "wrong-token") {
-		t.Error("invalid token accepted")
-	}
+	is.True(t, csrf.ValidToken("sess-abc", token))
+	is.True(t, !csrf.ValidToken("sess-abc", "wrong-token"))
 }
 
 func TestCSRF_RequireCSRF_BlocksWithoutToken(t *testing.T) {
 	csrf, err := middleware.NewCSRF("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	is.NoErr(t, err)
 
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -70,16 +57,12 @@ func TestCSRF_RequireCSRF_BlocksWithoutToken(t *testing.T) {
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusForbidden {
-		t.Fatalf("POST without CSRF: got %d, want 403", rec.Code)
-	}
+	is.Equal(t, rec.Code, http.StatusForbidden, "POST without CSRF")
 }
 
 func TestCSRF_RequireCSRF_AllowsValidToken(t *testing.T) {
 	csrf, err := middleware.NewCSRF("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	is.NoErr(t, err)
 
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -102,16 +85,12 @@ func TestCSRF_RequireCSRF_AllowsValidToken(t *testing.T) {
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("POST with valid CSRF: got %d, want 200", rec.Code)
-	}
+	is.Equal(t, rec.Code, http.StatusOK, "POST with valid CSRF")
 }
 
 func TestCSRF_RequireCSRF_AllowsGET(t *testing.T) {
 	csrf, err := middleware.NewCSRF("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	is.NoErr(t, err)
 
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -124,7 +103,5 @@ func TestCSRF_RequireCSRF_AllowsGET(t *testing.T) {
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("GET should pass through: got %d, want 200", rec.Code)
-	}
+	is.Equal(t, rec.Code, http.StatusOK, "GET should pass through")
 }
