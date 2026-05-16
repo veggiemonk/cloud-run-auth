@@ -25,7 +25,8 @@ func makeJWT(t *testing.T, header, payload map[string]any) string {
 
 func TestDecode_ValidJWT(t *testing.T) {
 	v := &Verifier{}
-	jwt := makeJWT(t,
+	jwt := makeJWT(
+		t,
 		map[string]any{"alg": "ES256", "typ": "JWT"},
 		map[string]any{
 			"iss":   "https://cloud.google.com/iap",
@@ -98,7 +99,8 @@ func TestDecode_InvalidFormat(t *testing.T) {
 
 func TestVerify_NoAudience(t *testing.T) {
 	v := &Verifier{expectedAudience: ""}
-	jwt := makeJWT(t,
+	jwt := makeJWT(
+		t,
 		map[string]any{"alg": "ES256"},
 		map[string]any{"email": "user@example.com"},
 	)

@@ -19,9 +19,9 @@ type Entry struct {
 
 // Buffer is a thread-safe ring buffer for request log entries.
 type Buffer struct {
-	mu      sync.RWMutex
 	entries []Entry
 	pos     int
+	mu      sync.RWMutex
 	full    bool
 }
 

@@ -29,12 +29,12 @@ type userInfoResponse struct {
 
 // authDeps holds shared dependencies for auth handlers.
 type authDeps struct {
+	sfGroup       singleflight.Group
 	oauthCfg      *oauth2.Config
 	store         *session.Store
-	cookies       CookieConfig
 	csrf          *middleware.CSRF
 	allowedDomain string
-	sfGroup       singleflight.Group
+	cookies       CookieConfig
 }
 
 // prodLoginHandler redirects to Google OAuth with domain hint.
@@ -44,7 +44,8 @@ func (d *authDeps) prodLoginHandler() http.HandlerFunc {
 
 		http.SetCookie(w, d.cookies.NewCookie(d.cookies.OAuthStateName, state, OAuthStateCookieMaxAge))
 
-		url := d.oauthCfg.AuthCodeURL(state,
+		url := d.oauthCfg.AuthCodeURL(
+			state,
 			oauth2.AccessTypeOffline,
 			oauth2.SetAuthURLParam("hd", d.allowedDomain),
 		)

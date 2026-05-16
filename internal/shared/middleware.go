@@ -27,7 +27,8 @@ func LoggingMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 
 		next.ServeHTTP(sw, r)
 
-		logger.Info("request",
+		logger.Info(
+			"request",
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", sw.Status,

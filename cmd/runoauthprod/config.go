@@ -24,6 +24,12 @@ const (
 
 // Config holds all application configuration from environment variables.
 type Config struct {
+	Google struct {
+		OAuthConfig  string `conf:"env:GOOGLE_OAUTH_CONFIG,mask"`
+		ClientID     string `conf:"env:GOOGLE_CLIENT_ID"`
+		ClientSecret string `conf:"env:GOOGLE_CLIENT_SECRET,mask"`
+		RedirectURL  string `conf:"env:OAUTH_REDIRECT_URL,default:http://localhost:8080/auth/callback"`
+	}
 	ProjectID            string `conf:"env:PROJECT_ID,required"`
 	Port                 string `conf:"env:PORT,default:8080"`
 	FirestoreDB          string `conf:"env:FIRESTORE_DATABASE,default:(default)"`
@@ -33,12 +39,6 @@ type Config struct {
 	AllowedDomain        string `conf:"env:ALLOWED_DOMAIN,default:myowndomain.com"`
 	AuthRateLimitBurst   int    `conf:"env:AUTH_RATE_LIMIT_BURST,default:20"`
 	UserRateLimitBurst   int    `conf:"env:USER_RATE_LIMIT_BURST,default:60"`
-	Google               struct {
-		OAuthConfig  string `conf:"env:GOOGLE_OAUTH_CONFIG,mask"`
-		ClientID     string `conf:"env:GOOGLE_CLIENT_ID"`
-		ClientSecret string `conf:"env:GOOGLE_CLIENT_SECRET,mask"`
-		RedirectURL  string `conf:"env:OAUTH_REDIRECT_URL,default:http://localhost:8080/auth/callback"`
-	}
 }
 
 // MustParse parses configuration from environment variables and exits on failure.

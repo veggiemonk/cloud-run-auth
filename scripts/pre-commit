@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# cloud-run-auth pre-commit hook.
+# Install with `go tool mage hooks` (copies this file into .git/hooks/pre-commit).
+#
+# Enforces two rules:
+#   1. No direct commits to main — always use a feature branch.
+#      Merge commits to main are allowed.
+#   2. Commit must build (`go build ./...`) and vet clean (`go vet ./...`).
+#      Tests are NOT run here — use `go tool mage check` before pushing.
+
+set -euo pipefail
+
+branch="$(git rev-parse --abbrev-ref HEAD)"
+is_merge=0
+if git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+  is_merge=1
+fi
+
+if [[ "$branch" == "main" && $is_merge -eq 0 ]]; then
+  echo "pre-commit: direct commits to main are blocked — work on a branch." >&2
+  echo "pre-commit: if this really is a merge, use --no-ff and commit again." >&2
+  exit 1
+fi
+
+if ! go build ./... ; then
+  echo "pre-commit: go build ./... failed" >&2
+  exit 1
+fi
+
+if ! go vet ./... ; then
+  echo "pre-commit: go vet ./... failed" >&2
+  exit 1
+fi

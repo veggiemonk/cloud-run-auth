@@ -52,14 +52,12 @@ func TestSessionStore_ConcurrentAccess(t *testing.T) {
 	store := NewSessionStore(nil)
 	var wg sync.WaitGroup
 
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 100 {
+		wg.Go(func() {
 			s := store.Create("user@example.com", "User", "", nil)
 			store.Get(s.ID)
 			store.Delete(s.ID)
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -98,7 +96,7 @@ func TestSessionStore_MaxSessions(t *testing.T) {
 	store := NewSessionStore(nil)
 
 	// Fill to capacity.
-	for i := 0; i < maxSessions; i++ {
+	for range maxSessions {
 		store.Create("user@example.com", "User", "", nil)
 	}
 

@@ -14,10 +14,10 @@ type DashboardData struct {
 // TokenData holds the data for the token inspection view.
 type TokenData struct {
 	AccessTokenMasked string   `json:"access_token_masked,omitempty"`
-	HasRefreshToken   bool     `json:"has_refresh_token"`
-	Scopes            []string `json:"scopes,omitempty"`
 	Expiry            string   `json:"expiry,omitempty"`
 	TokenType         string   `json:"token_type,omitempty"`
+	Scopes            []string `json:"scopes,omitempty"`
+	HasRefreshToken   bool     `json:"has_refresh_token"`
 }
 
 // GCPProject represents a Google Cloud project.
@@ -28,8 +28,8 @@ type GCPProject struct {
 
 // GCPData holds the data for the GCP explorer view.
 type GCPData struct {
-	Projects []GCPProject `json:"projects,omitempty"`
 	Error    string       `json:"error,omitempty"`
+	Projects []GCPProject `json:"projects,omitempty"`
 }
 
 // Check represents a single diagnostic check result.

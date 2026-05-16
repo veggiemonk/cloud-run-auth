@@ -212,7 +212,7 @@ cloud-run-auth/
 │   ├── oauth-guide.md               # OAuth model deep dive
 │   └── runoauthprod-guide.md        # Production OAuth guide
 ├── go.mod / go.sum                  # Go dependencies (single module)
-├── Makefile                         # Build and dev commands
+├── magefile.go                      # Build and dev commands (run via `go tool mage`)
 ├── .goreleaser.yaml                 # Release automation with ko
 └── service.yaml                     # Knative service definition (reference)
 ```

@@ -31,12 +31,12 @@ func (v *Verifier) ExpectedAudience() string {
 
 // VerificationResult holds the outcome of JWT verification or decoding.
 type VerificationResult struct {
-	Valid        bool           `json:"valid"`
-	Error        string         `json:"error,omitempty"`
 	Header       map[string]any `json:"header,omitempty"`
 	Payload      map[string]any `json:"payload,omitempty"`
 	Claims       *Claims        `json:"claims,omitempty"`
+	Error        string         `json:"error,omitempty"`
 	SignatureB64 string         `json:"signature_b64,omitempty"`
+	Valid        bool           `json:"valid"`
 }
 
 // Verify validates the JWT signature using Google's public keys via idtoken.Validate,

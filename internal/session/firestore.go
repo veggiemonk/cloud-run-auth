@@ -25,14 +25,14 @@ const (
 
 // Session represents a user session with decrypted tokens.
 type Session struct {
+	TokenExpiry  time.Time
+	CreatedAt    time.Time
+	ExpiresAt    time.Time
 	Email        string
 	Name         string
 	Picture      string
 	AccessToken  string
 	RefreshToken string
-	TokenExpiry  time.Time
-	CreatedAt    time.Time
-	ExpiresAt    time.Time
 }
 
 // Token returns an oauth2.Token from the session.
@@ -47,14 +47,14 @@ func (s *Session) Token() *oauth2.Token {
 
 // firestoreSession is the Firestore document structure.
 type firestoreSession struct {
+	TokenExpiry           time.Time `firestore:"token_expiry"`
+	CreatedAt             time.Time `firestore:"created_at"`
+	ExpiresAt             time.Time `firestore:"expires_at"`
 	Email                 string    `firestore:"email"`
 	Name                  string    `firestore:"name"`
 	Picture               string    `firestore:"picture"`
 	EncryptedAccessToken  []byte    `firestore:"encrypted_access_token"`
 	EncryptedRefreshToken []byte    `firestore:"encrypted_refresh_token"`
-	TokenExpiry           time.Time `firestore:"token_expiry"`
-	CreatedAt             time.Time `firestore:"created_at"`
-	ExpiresAt             time.Time `firestore:"expires_at"`
 }
 
 // Store manages sessions in Firestore with AES-GCM encrypted tokens.

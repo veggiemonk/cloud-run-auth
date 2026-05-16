@@ -16,19 +16,19 @@ const (
 
 // Session represents an authenticated user session.
 type Session struct {
+	CreatedAt time.Time
+	Token     *oauth2.Token
 	ID        string
 	Email     string
 	Name      string
 	Picture   string
-	Token     *oauth2.Token
-	CreatedAt time.Time
 }
 
 // SessionStore is a thread-safe in-memory session store.
 type SessionStore struct {
-	mu          sync.RWMutex
 	sessions    map[string]*Session
 	OAuthConfig *oauth2.Config
+	mu          sync.RWMutex
 }
 
 // NewSessionStore creates a new empty session store.

@@ -4,9 +4,9 @@ import "net/http"
 
 // CookieConfig holds environment-aware cookie settings.
 type CookieConfig struct {
-	Secure         bool
 	SessionName    string
 	OAuthStateName string
+	Secure         bool
 }
 
 // NewCookieConfig creates a CookieConfig based on whether the app is running

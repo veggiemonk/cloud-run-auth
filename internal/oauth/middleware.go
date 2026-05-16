@@ -13,11 +13,11 @@ const userContextKey contextKey = "oauth_user"
 
 // UserInfo holds the authenticated user's information.
 type UserInfo struct {
+	Token       *oauth2.Token
+	OAuthConfig *oauth2.Config
 	Email       string
 	Name        string
 	Picture     string
-	Token       *oauth2.Token
-	OAuthConfig *oauth2.Config
 }
 
 // RequireAuth is middleware that ensures the user has a valid session.

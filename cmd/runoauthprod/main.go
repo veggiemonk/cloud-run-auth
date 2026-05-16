@@ -40,7 +40,11 @@ func main() {
 		slog.Error("failed to initialize session store", "error", err)
 		os.Exit(1)
 	}
-	defer store.Close()
+	defer func() {
+		if err := store.Close(); err != nil {
+			slog.Warn("failed to close session store", "error", err)
+		}
+	}()
 
 	// Create OAuth config.
 	oauthCfg, err := newGoogleConfig(cfg)
@@ -118,7 +122,8 @@ func main() {
 	mux.Handle("/", protectedChain)
 
 	// Middleware chain (outermost first).
-	handler := shared.LoggingMiddleware(logger,
+	handler := shared.LoggingMiddleware(
+		logger,
 		middleware.SecurityHeaders(
 			middleware.MaxBodySize(MaxBodyBytes)(
 				shared.RequestLogMiddleware(buf, deps.emailFromSession, "oauth", mux),

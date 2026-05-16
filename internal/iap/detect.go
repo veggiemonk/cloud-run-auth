@@ -7,13 +7,13 @@ import (
 
 // DetectionResult holds the results of checking for IAP headers on a request.
 type DetectionResult struct {
-	HasJWT         bool   `json:"has_jwt"`
-	HasEmailHeader bool   `json:"has_email_header"`
-	HasIDHeader    bool   `json:"has_id_header"`
 	Email          string `json:"email,omitempty"`
 	UserID         string `json:"user_id,omitempty"`
 	RawJWT         string `json:"-"`
 	Warning        string `json:"warning,omitempty"`
+	HasJWT         bool   `json:"has_jwt"`
+	HasEmailHeader bool   `json:"has_email_header"`
+	HasIDHeader    bool   `json:"has_id_header"`
 }
 
 // Detect checks the request for IAP-related headers and cross-validates them.

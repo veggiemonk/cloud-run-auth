@@ -50,10 +50,10 @@ func (rl *IPRateLimiter) limiterFor(ip string) *rate.Limiter {
 
 // UserRateLimiter provides per-user rate limiting using an email extractor function.
 type UserRateLimiter struct {
+	ExtractEmail func(*http.Request) string
 	users        sync.Map
 	limit        rate.Limit
 	burst        int
-	ExtractEmail func(*http.Request) string
 }
 
 // NewUserRateLimiter creates a rate limiter that allows burst requests per interval per user.

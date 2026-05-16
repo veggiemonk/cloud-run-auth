@@ -11,10 +11,10 @@ type DashboardData struct {
 	Email        string `json:"email,omitempty"`
 	UserID       string `json:"user_id,omitempty"`
 	HostedDomain string `json:"hosted_domain,omitempty"`
-	HasIAP       bool   `json:"has_iap"`
 	IAPWarning   string `json:"iap_warning,omitempty"`
-	JWTValid     bool   `json:"jwt_valid"`
 	JWTError     string `json:"jwt_error,omitempty"`
+	HasIAP       bool   `json:"has_iap"`
+	JWTValid     bool   `json:"jwt_valid"`
 }
 
 // HeaderEntry represents a single HTTP header for display.
@@ -32,22 +32,22 @@ type HeadersData struct {
 // JWTData holds the data for the JWT inspection view.
 // RawJWT is intentionally excluded to prevent bearer token leakage via JSON API.
 type JWTData struct {
-	Present         bool        `json:"present"`
+	Claims          *iap.Claims `json:"claims,omitempty"`
 	HeaderJSON      string      `json:"header_json,omitempty"`
 	PayloadJSON     string      `json:"payload_json,omitempty"`
 	SignatureB64    string      `json:"signature_b64,omitempty"`
-	Valid           bool        `json:"valid"`
 	ValidationError string      `json:"validation_error,omitempty"`
-	Claims          *iap.Claims `json:"claims,omitempty"`
+	Present         bool        `json:"present"`
+	Valid           bool        `json:"valid"`
 }
 
 // AudienceData holds the data for the audience validation view.
 type AudienceData struct {
 	CurrentAudience  string `json:"current_audience,omitempty"`
 	ExpectedAudience string `json:"expected_audience,omitempty"`
+	FormatHelp       string `json:"format_help"`
 	Match            bool   `json:"match"`
 	Checked          bool   `json:"checked"`
-	FormatHelp       string `json:"format_help"`
 }
 
 // Check represents a single diagnostic check result.
