@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/veggiemonk/cloud-run-auth/internal/closeutil"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
@@ -149,7 +150,7 @@ func LogoutHandler(sessions *SessionStore) http.HandlerFunc {
 }
 
 // fetchUserInfo retrieves the user's profile from Google's userinfo endpoint.
-func fetchUserInfo(ctx context.Context, cfg *oauth2.Config, token *oauth2.Token) (*userInfo, error) {
+func fetchUserInfo(ctx context.Context, cfg *oauth2.Config, token *oauth2.Token) (info *userInfo, err error) {
 	client := cfg.Client(ctx, token)
 	client.Timeout = 10 * time.Second
 
@@ -166,17 +167,17 @@ func fetchUserInfo(ctx context.Context, cfg *oauth2.Config, token *oauth2.Token)
 	if err != nil {
 		return nil, fmt.Errorf("userinfo request failed: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer closeutil.Do(&err, resp.Body.Close, "close userinfo body")
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("userinfo returned status %d", resp.StatusCode)
 	}
 
-	var info userInfo
-	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+	info = &userInfo{}
+	if err := json.NewDecoder(resp.Body).Decode(info); err != nil {
 		return nil, fmt.Errorf("failed to decode userinfo: %w", err)
 	}
-	return &info, nil
+	return info, nil
 }
 
 // generateState generates a 32-byte random hex-encoded state parameter.

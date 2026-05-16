@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -17,11 +16,11 @@ type Verifier struct {
 	expectedAudience string
 }
 
-// NewVerifier creates a new Verifier, reading IAP_AUDIENCE from the environment.
-func NewVerifier() *Verifier {
-	return &Verifier{
-		expectedAudience: os.Getenv("IAP_AUDIENCE"),
-	}
+// NewVerifier creates a Verifier bound to the given expected audience.
+// An empty audience disables signature verification (Verify will return
+// an error result) but Decode still works for inspection.
+func NewVerifier(audience string) *Verifier {
+	return &Verifier{expectedAudience: audience}
 }
 
 // ExpectedAudience returns the configured expected audience string.

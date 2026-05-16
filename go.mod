@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/firestore v1.22.0
 	github.com/a-h/templ v0.3.1020
 	github.com/ardanlabs/conf/v3 v3.12.0
+	github.com/google/go-cmp v0.7.0
 	github.com/magefile/mage v1.14.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.20.0

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/veggiemonk/cloud-run-auth/internal/closeutil"
 	"github.com/veggiemonk/cloud-run-auth/internal/middleware"
 	"github.com/veggiemonk/cloud-run-auth/internal/oauth"
 	"github.com/veggiemonk/cloud-run-auth/internal/session"
@@ -253,7 +254,7 @@ func (d *authDeps) emailFromSession(r *http.Request) string {
 }
 
 // fetchUserInfoProd retrieves user profile from Google's userinfo endpoint.
-func fetchUserInfoProd(ctx context.Context, cfg *oauth2.Config, token *oauth2.Token) (*userInfoResponse, error) {
+func fetchUserInfoProd(ctx context.Context, cfg *oauth2.Config, token *oauth2.Token) (info *userInfoResponse, err error) {
 	client := cfg.Client(ctx, token)
 	client.Timeout = 10 * time.Second
 
@@ -266,17 +267,17 @@ func fetchUserInfoProd(ctx context.Context, cfg *oauth2.Config, token *oauth2.To
 	if err != nil {
 		return nil, fmt.Errorf("userinfo request failed: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer closeutil.Do(&err, resp.Body.Close, "close userinfo body")
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("userinfo returned status %d", resp.StatusCode)
 	}
 
-	var info userInfoResponse
-	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+	info = &userInfoResponse{}
+	if err := json.NewDecoder(resp.Body).Decode(info); err != nil {
 		return nil, fmt.Errorf("failed to decode userinfo: %w", err)
 	}
-	return &info, nil
+	return info, nil
 }
 
 func generateState() string {
