@@ -1,3 +1,11 @@
+// Package reqlog owns the bounded in-memory ring buffer of recent
+// request entries that the diagnostic "/log" page renders.
+//
+// Exists as a deliberately tiny replacement for a real log backend:
+// the diagnostic UIs need a few hundred recent requests visible at a
+// glance, but we don't want to depend on Cloud Logging or pull
+// log-bucket reads into the request path. The buffer is fixed-size,
+// lock-protected, and forgets the oldest entry on overflow.
 package reqlog
 
 import (

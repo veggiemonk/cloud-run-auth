@@ -1,3 +1,10 @@
+// Runoauthprod owns the production OAuth binary: Google OAuth with
+// Firestore-backed encrypted sessions (internal/session), CSRF, rate
+// limiting, body limits, and security headers (internal/middleware), plus
+// allowed-domain gating against an org's Workspace HD.
+//
+// Exists as the hardened deployment target for Cloud Run — runoauth is the
+// dev counterpart with the same handlers but in-memory state.
 package main
 
 import (

@@ -1,3 +1,13 @@
+// Package oauth owns the Google OAuth2 server-side flow and the
+// in-memory session store backing it: login/callback/logout handlers,
+// state-cookie generation, userinfo fetch, and the SessionStore +
+// RequireAuth middleware that protect downstream routes.
+//
+// Exists as the dev/local counterpart to internal/session (which is the
+// Firestore-backed production store): sessions are RAM-only, capped, and
+// evicted by TTL. Production binaries (runoauthprod) bypass this store
+// and wire internal/session directly while still reusing this package's
+// UserInfo context plumbing.
 package oauth
 
 import (

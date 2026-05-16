@@ -1,3 +1,12 @@
+// Runiap owns the IAP-fronted demo binary: a Cloud Run service that
+// expects Google IAP in front of it and exposes diagnostic pages
+// (dashboard, headers, JWT inspector, audience checker, log) for
+// inspecting the identity Google injects via X-Goog-* headers.
+//
+// Exists as a debugging/learning surface for IAP — when IAP_AUDIENCE is
+// set, requests are gated on a verified JWT (internal/iap); when unset,
+// the binary still runs locally with verification disabled so the UI
+// remains useful in dev.
 package main
 
 import (

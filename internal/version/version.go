@@ -1,5 +1,3 @@
-// Package version handles the version from VCS automatically.
-// adapted from: https://github.com/imjasonh/version/blob/main/version.go
 package version
 
 import (

@@ -1,3 +1,10 @@
+// Runoauth owns the local/dev OAuth demo binary: a single HTTP process
+// wiring the Google OAuth flow (internal/oauth) to the in-memory session
+// store and the shared dashboard handlers (internal/handler/oauthhandler).
+//
+// Exists as a no-secrets-stored counterpart to runoauthprod — useful for
+// local development against real Google OAuth without provisioning
+// Firestore, CSRF keys, or session encryption.
 package main
 
 import (
