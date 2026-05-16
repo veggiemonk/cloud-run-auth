@@ -23,4 +23,5 @@ jobs:
         with:
           version: latest
           install-mode: binary
+          install-only: true
       - run: go tool mage ci
