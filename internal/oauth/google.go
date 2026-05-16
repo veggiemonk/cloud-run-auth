@@ -163,7 +163,7 @@ func fetchUserInfo(ctx context.Context, cfg *oauth2.Config, token *oauth2.Token)
 	if err != nil {
 		return nil, fmt.Errorf("userinfo request build failed: %w", err)
 	}
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) //nolint:bodyclose // closed via closeutil.Do below
 	if err != nil {
 		return nil, fmt.Errorf("userinfo request failed: %w", err)
 	}

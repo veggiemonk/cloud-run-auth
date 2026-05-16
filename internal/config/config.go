@@ -61,6 +61,7 @@ func (c Common) Validate() error {
 // (KService set) is a misconfiguration that the binary logs at error.
 type IAP struct {
 	Common
+
 	Audience string `conf:"env:IAP_AUDIENCE"`
 	KService string `conf:"env:K_SERVICE"`
 }
@@ -69,6 +70,7 @@ type IAP struct {
 // flow backed by the in-memory session store.
 type OAuth struct {
 	Common
+
 	ClientID     string `conf:"env:GOOGLE_CLIENT_ID,required"`
 	ClientSecret string `conf:"env:GOOGLE_CLIENT_SECRET,required,mask"`
 	RedirectURL  string `conf:"env:OAUTH_REDIRECT_URL,default:http://localhost:8080/auth/callback"`
@@ -79,6 +81,7 @@ type OAuth struct {
 // allowed-domain gating.
 type OAuthProd struct {
 	Common
+
 	Google struct {
 		OAuthConfig  string `conf:"env:GOOGLE_OAUTH_CONFIG,mask"`
 		ClientID     string `conf:"env:GOOGLE_CLIENT_ID"`
@@ -107,7 +110,7 @@ func LoadIAP() (IAP, string, error) {
 		}
 		return cfg, "", fmt.Errorf("parsing config: %w", err)
 	}
-	if err := cfg.Common.Validate(); err != nil {
+	if err := cfg.Validate(); err != nil {
 		return cfg, "", err
 	}
 	return cfg, "", nil
@@ -123,7 +126,7 @@ func LoadOAuth() (OAuth, string, error) {
 		}
 		return cfg, "", fmt.Errorf("parsing config: %w", err)
 	}
-	if err := cfg.Common.Validate(); err != nil {
+	if err := cfg.Validate(); err != nil {
 		return cfg, "", err
 	}
 	return cfg, "", nil
@@ -139,7 +142,7 @@ func LoadOAuthProd() (OAuthProd, string, error) {
 		}
 		return cfg, "", fmt.Errorf("parsing config: %w", err)
 	}
-	if err := cfg.Common.Validate(); err != nil {
+	if err := cfg.Validate(); err != nil {
 		return cfg, "", err
 	}
 	return cfg, "", nil

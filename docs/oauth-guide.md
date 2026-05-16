@@ -7,6 +7,7 @@
 > **App location:** [`cmd/runoauth/`](../cmd/runoauth/)
 
 **Official docs:**
+
 - [OAuth 2.0 for Web Server Applications](https://developers.google.com/identity/protocols/oauth2/web-server)
 - [Google OAuth 2.0 Scopes](https://developers.google.com/identity/protocols/oauth2/scopes)
 - [OAuth 2.0 Playground](https://developers.google.com/oauthplayground/)
@@ -19,32 +20,32 @@
 - [How OAuth Works on Cloud Run](#how-oauth-works-on-cloud-run)
 - [IAP vs OAuth — When to Use Which](#iap-vs-oauth--when-to-use-which)
 - [Deployment Guide](#deployment-guide)
-  - [Prerequisites](#prerequisites)
-  - [Creating OAuth Credentials](#creating-oauth-credentials)
-  - [Deploy with OAuth](#deploy-with-oauth)
-  - [Step-by-Step Manual Deployment](#step-by-step-manual-deployment)
+    - [Prerequisites](#prerequisites)
+    - [Creating OAuth Credentials](#creating-oauth-credentials)
+    - [Deploy with OAuth](#deploy-with-oauth)
+    - [Step-by-Step Manual Deployment](#step-by-step-manual-deployment)
 - [Understanding the OAuth Flow](#understanding-the-oauth-flow)
-  - [Authorization Code Flow](#authorization-code-flow)
-  - [State Parameter (CSRF Protection)](#state-parameter-csrf-protection)
-  - [Token Exchange](#token-exchange)
+    - [Authorization Code Flow](#authorization-code-flow)
+    - [State Parameter (CSRF Protection)](#state-parameter-csrf-protection)
+    - [Token Exchange](#token-exchange)
 - [Tokens and Scopes](#tokens-and-scopes)
-  - [Access Tokens vs Refresh Tokens](#access-tokens-vs-refresh-tokens)
-  - [Scopes](#scopes)
-  - [Token Lifecycle](#token-lifecycle)
+    - [Access Tokens vs Refresh Tokens](#access-tokens-vs-refresh-tokens)
+    - [Scopes](#scopes)
+    - [Token Lifecycle](#token-lifecycle)
 - [Session Management](#session-management)
-  - [Why You Need Sessions](#why-you-need-sessions)
-  - [RunOAuth's Session Architecture](#runoauths-session-architecture)
-  - [Session Security](#session-security)
+    - [Why You Need Sessions](#why-you-need-sessions)
+    - [RunOAuth's Session Architecture](#runoauths-session-architecture)
+    - [Session Security](#session-security)
 - [Accessing GCP APIs](#accessing-gcp-apis)
-  - [Using the User's Token](#using-the-users-token)
-  - [What RunOAuth Demonstrates](#what-runoauth-demonstrates)
-  - [Go Implementation](#go-implementation)
+    - [Using the User's Token](#using-the-users-token)
+    - [What RunOAuth Demonstrates](#what-runoauth-demonstrates)
+    - [Go Implementation](#go-implementation)
 - [Common Security Mistakes](#common-security-mistakes)
 - [RunOAuth Diagnostic Pages](#runoauth-diagnostic-pages)
 - [Integrating OAuth in Your Own App](#integrating-oauth-in-your-own-app)
-  - [Minimal Go Example](#minimal-go-example)
-  - [Python / Flask Example](#python--flask-example)
-  - [Node.js / Express Example](#nodejs--express-example)
+    - [Minimal Go Example](#minimal-go-example)
+    - [Python / Flask Example](#python--flask-example)
+    - [Node.js / Express Example](#nodejs--express-example)
 - [Troubleshooting](#troubleshooting)
 - [Architecture](#architecture)
 
@@ -224,6 +225,7 @@ gcloud run deploy myapp \
 ```
 
 Key flags:
+
 - `--image` — deploy the ko-built image from Artifact Registry
 - `--allow-unauthenticated` — **required** for OAuth apps (the app handles auth itself)
 - `--set-env-vars` — set OAuth credentials and redirect URL in the same deploy to avoid startup failures
@@ -852,6 +854,7 @@ Scopes: []string{
 In-memory sessions don't survive container restarts.
 
 **Fix:** Use a persistent session store:
+
 - **Redis** via [Cloud Memorystore](https://cloud.google.com/memorystore)
 - **Cloud Firestore** for serverless persistence
 - **Encrypted cookies** (stateless — limited by cookie size)
@@ -908,6 +911,7 @@ internal/
 ```
 
 **Key dependencies:**
+
 - [`golang.org/x/oauth2`](https://pkg.go.dev/golang.org/x/oauth2) — OAuth 2.0 flow
 - [`google.golang.org/api/cloudresourcemanager/v3`](https://pkg.go.dev/google.golang.org/api/cloudresourcemanager/v3) — GCP project listing
 - [`github.com/a-h/templ`](https://templ.guide/) — Type-safe HTML templating

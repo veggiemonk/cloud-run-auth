@@ -254,7 +254,11 @@ func (d *authDeps) emailFromSession(r *http.Request) string {
 }
 
 // fetchUserInfoProd retrieves user profile from Google's userinfo endpoint.
-func fetchUserInfoProd(ctx context.Context, cfg *oauth2.Config, token *oauth2.Token) (info *userInfoResponse, err error) {
+func fetchUserInfoProd(
+	ctx context.Context,
+	cfg *oauth2.Config,
+	token *oauth2.Token,
+) (info *userInfoResponse, err error) {
 	client := cfg.Client(ctx, token)
 	client.Timeout = 10 * time.Second
 
@@ -263,7 +267,7 @@ func fetchUserInfoProd(ctx context.Context, cfg *oauth2.Config, token *oauth2.To
 	if err != nil {
 		return nil, fmt.Errorf("userinfo request build failed: %w", err)
 	}
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) //nolint:bodyclose // closed via closeutil.Do below
 	if err != nil {
 		return nil, fmt.Errorf("userinfo request failed: %w", err)
 	}

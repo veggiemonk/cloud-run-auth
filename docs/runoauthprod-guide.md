@@ -12,39 +12,39 @@
 
 - [What RunOAuthProd Adds (vs RunOAuth)](#what-runoauthprod-adds-vs-runoauth)
 - [Configuration](#configuration)
-  - [Environment Variables](#environment-variables)
-  - [OAuth Config: JSON Blob vs Individual Vars](#oauth-config-json-blob-vs-individual-vars)
-  - [Generating Keys](#generating-keys)
-  - [Hardcoded Security Constants](#hardcoded-security-constants)
+    - [Environment Variables](#environment-variables)
+    - [OAuth Config: JSON Blob vs Individual Vars](#oauth-config-json-blob-vs-individual-vars)
+    - [Generating Keys](#generating-keys)
+    - [Hardcoded Security Constants](#hardcoded-security-constants)
 - [Session Security — Firestore + AES-256-GCM](#session-security--firestore--aes-256-gcm)
-  - [Why Encrypted Sessions Matter](#why-encrypted-sessions-matter)
-  - [How Encryption Works](#how-encryption-works)
-  - [Firestore Document Structure](#firestore-document-structure)
-  - [TTL and Auto-Eviction](#ttl-and-auto-eviction)
-  - [Multi-Instance Support](#multi-instance-support)
+    - [Why Encrypted Sessions Matter](#why-encrypted-sessions-matter)
+    - [How Encryption Works](#how-encryption-works)
+    - [Firestore Document Structure](#firestore-document-structure)
+    - [TTL and Auto-Eviction](#ttl-and-auto-eviction)
+    - [Multi-Instance Support](#multi-instance-support)
 - [Cookie Hardening](#cookie-hardening)
-  - [\_\_Host- Prefix](#__host--prefix)
-  - [Cookie Attributes](#cookie-attributes)
-  - [Environment-Aware Naming](#environment-aware-naming)
-  - [OAuth State Cookie](#oauth-state-cookie)
+    - [\_\_Host- Prefix](#__host--prefix)
+    - [Cookie Attributes](#cookie-attributes)
+    - [Environment-Aware Naming](#environment-aware-naming)
+    - [OAuth State Cookie](#oauth-state-cookie)
 - [CSRF Protection](#csrf-protection)
-  - [How Tokens Are Derived](#how-tokens-are-derived)
-  - [Where CSRF Is Enforced](#where-csrf-is-enforced)
-  - [Multi-Instance Requirement](#multi-instance-requirement)
-  - [Form and Header Support](#form-and-header-support)
+    - [How Tokens Are Derived](#how-tokens-are-derived)
+    - [Where CSRF Is Enforced](#where-csrf-is-enforced)
+    - [Multi-Instance Requirement](#multi-instance-requirement)
+    - [Form and Header Support](#form-and-header-support)
 - [Rate Limiting](#rate-limiting)
-  - [Two Tiers](#two-tiers)
-  - [IP Extraction on Cloud Run](#ip-extraction-on-cloud-run)
+    - [Two Tiers](#two-tiers)
+    - [IP Extraction on Cloud Run](#ip-extraction-on-cloud-run)
 - [Token Lifecycle](#token-lifecycle)
-  - [Automatic Refresh](#automatic-refresh)
-  - [Singleflight Deduplication](#singleflight-deduplication)
+    - [Automatic Refresh](#automatic-refresh)
+    - [Singleflight Deduplication](#singleflight-deduplication)
 - [Security Headers](#security-headers)
 - [Domain Restriction](#domain-restriction)
 - [Middleware Chain](#middleware-chain)
 - [Deployment Checklist](#deployment-checklist)
-  - [Secret Manager Integration](#secret-manager-integration)
-  - [Firestore Setup](#firestore-setup)
-  - [Environment Variable Checklist](#environment-variable-checklist)
+    - [Secret Manager Integration](#secret-manager-integration)
+    - [Firestore Setup](#firestore-setup)
+    - [Environment Variable Checklist](#environment-variable-checklist)
 - [Architecture](#architecture)
 - [Troubleshooting](#troubleshooting)
 
@@ -229,6 +229,7 @@ __Host-oauth-state
 ```
 
 The `__Host-` prefix tells the browser to enforce:
+
 - `Secure` flag (HTTPS only)
 - `Path=/` (sent on all paths)
 - No `Domain` attribute (exact host match only — no subdomain leakage)
@@ -603,6 +604,7 @@ openssl rand -base64 32 | gcloud secrets create csrf-key --data-file=-
 **Cause:** Rate limiter triggered.
 
 **Fix:** Check which tier is triggering:
+
 - Auth endpoints (IP-based): Default 20 req/min. Increase `AUTH_RATE_LIMIT_BURST` if legitimate.
 - Protected routes (user-based): Default 60 req/min. Increase `USER_RATE_LIMIT_BURST` if legitimate.
 

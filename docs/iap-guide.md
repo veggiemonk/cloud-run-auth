@@ -7,6 +7,7 @@
 > **App location:** [`cmd/runiap/`](../cmd/runiap/)
 
 **Official docs:**
+
 - [IAP on Cloud Run](https://cloud.google.com/run/docs/securing/identity-aware-proxy-cloud-run)
 - [IAP blog post](https://cloud.google.com/blog/products/serverless/iap-integration-with-cloud-run)
 
@@ -17,24 +18,24 @@
 - [Quick Start](#quick-start)
 - [How IAP Works on Cloud Run](#how-iap-works-on-cloud-run)
 - [Deployment Guide](#deployment-guide)
-  - [Prerequisites](#prerequisites)
-  - [One-Time Project Setup](#one-time-project-setup)
-  - [Deploy with IAP](#deploy-with-iap)
-  - [Step-by-Step Manual Deployment](#step-by-step-manual-deployment)
+    - [Prerequisites](#prerequisites)
+    - [One-Time Project Setup](#one-time-project-setup)
+    - [Deploy with IAP](#deploy-with-iap)
+    - [Step-by-Step Manual Deployment](#step-by-step-manual-deployment)
 - [Understanding IAP Headers](#understanding-iap-headers)
-  - [The Three Headers](#the-three-headers)
-  - [Why Headers Alone Are Not Enough](#why-headers-alone-are-not-enough)
+    - [The Three Headers](#the-three-headers)
+    - [Why Headers Alone Are Not Enough](#why-headers-alone-are-not-enough)
 - [JWT Verification](#jwt-verification)
-  - [What the JWT Contains](#what-the-jwt-contains)
-  - [Verifying the JWT in Your App](#verifying-the-jwt-in-your-app)
-  - [The Audience Value](#the-audience-value)
-  - [Go Implementation](#go-implementation)
+    - [What the JWT Contains](#what-the-jwt-contains)
+    - [Verifying the JWT in Your App](#verifying-the-jwt-in-your-app)
+    - [The Audience Value](#the-audience-value)
+    - [Go Implementation](#go-implementation)
 - [Common Security Mistakes](#common-security-mistakes)
 - [RunIAP Diagnostic Pages](#runiap-diagnostic-pages)
 - [Integrating IAP in Your Own App](#integrating-iap-in-your-own-app)
-  - [Minimal Go Example](#minimal-go-example)
-  - [Python / Flask Example](#python--flask-example)
-  - [Node.js / Express Example](#nodejs--express-example)
+    - [Minimal Go Example](#minimal-go-example)
+    - [Python / Flask Example](#python--flask-example)
+    - [Node.js / Express Example](#nodejs--express-example)
 - [Troubleshooting](#troubleshooting)
 - [Architecture](#architecture)
 
@@ -58,8 +59,8 @@ The setup script enables APIs, grants IAP service agent access, and restricts do
 
 ```
 ┌──────────┐     ┌─────────────────────┐     ┌──────────────────┐
-│  Browser  │────▶│  Identity-Aware     │────▶│  Cloud Run       │
-│           │◀────│  Proxy (IAP)        │◀────│  Service         │
+│  Browser │────▶│  Identity-Aware     │────▶│  Cloud Run       │
+│          │◀────│  Proxy (IAP)        │◀────│  Service         │
 └──────────┘     └─────────────────────┘     └──────────────────┘
                    │                           │
                    │ 1. Intercepts request     │ 4. Receives request
@@ -173,6 +174,7 @@ gcloud run deploy myapp \
 ```
 
 Key flags:
+
 - `--image` — deploy the ko-built image from Artifact Registry
 - `--no-allow-unauthenticated` — blocks direct access without authentication
 - `--iap` — enables IAP as a sidecar on the Cloud Run service
@@ -338,6 +340,7 @@ For Cloud Run services with native IAP (the `--iap` flag), the audience follows 
 ```
 
 For example:
+
 ```
 /projects/628205712753/locations/us-central1/services/runiap
 ```
@@ -390,6 +393,7 @@ func (v *Verifier) Verify(ctx context.Context, rawJWT string) (*VerificationResu
 ```
 
 `idtoken.Validate` handles:
+
 - Fetching and caching Google's public keys
 - Verifying the ES256 signature
 - Checking the audience matches
@@ -445,6 +449,7 @@ The IAP JWT is an **identity token**, not an access token. It proves who the use
 | OAuth2 access token | Authorizes API calls on behalf of a user or service account | Yes |
 
 If your app needs to access GCP resources:
+
 - **As the app itself** — use the Cloud Run service's [service account identity](https://cloud.google.com/run/docs/securing/service-identity). No extra setup needed; the default service account credentials are available automatically.
 - **As the authenticated user** — you need a separate [OAuth2 consent flow](https://cloud.google.com/iap/docs/authentication-howto#authenticating_from_a_service_account) to obtain an access token. IAP does not forward the user's OAuth2 token.
 
@@ -624,11 +629,13 @@ npm install express google-auth-library
 Your `IAP_AUDIENCE` env var doesn't match the `aud` claim in the JWT.
 
 **Fix:** The correct format for Cloud Run native IAP is:
+
 ```
 /projects/{PROJECT_NUMBER}/locations/{REGION}/services/{SERVICE_NAME}
 ```
 
 Use the RunIAP JWT page or decode the JWT manually to see the actual `aud` value, then update:
+
 ```bash
 gcloud run services update myapp --region=us-central1 \
   --update-env-vars=IAP_AUDIENCE=/projects/123456/locations/us-central1/services/myapp
@@ -637,6 +644,7 @@ gcloud run services update myapp --region=us-central1 \
 ### Users get 403 after authenticating
 
 The IAP service agent likely doesn't have the invoker role:
+
 ```bash
 PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format='value(projectNumber)')
 gcloud run services add-iam-policy-binding myapp \
@@ -700,5 +708,6 @@ internal/
 ```
 
 **Key dependencies:**
+
 - [`google.golang.org/api/idtoken`](https://pkg.go.dev/google.golang.org/api/idtoken) — JWT signature verification
 - [`github.com/a-h/templ`](https://templ.guide/) — Type-safe HTML templating
