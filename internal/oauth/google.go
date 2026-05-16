@@ -80,6 +80,7 @@ func CallbackHandler(cfg *oauth2.Config, sessions *SessionStore) http.HandlerFun
 			MaxAge:   -1,
 			HttpOnly: true,
 			Secure:   true,
+			SameSite: http.SameSiteLaxMode,
 		})
 
 		// Check for error from OAuth provider.
@@ -140,6 +141,7 @@ func LogoutHandler(sessions *SessionStore) http.HandlerFunc {
 			MaxAge:   -1,
 			HttpOnly: true,
 			Secure:   true,
+			SameSite: http.SameSiteLaxMode,
 		})
 
 		http.Redirect(w, r, "/auth/login", http.StatusFound)
@@ -151,7 +153,16 @@ func fetchUserInfo(ctx context.Context, cfg *oauth2.Config, token *oauth2.Token)
 	client := cfg.Client(ctx, token)
 	client.Timeout = 10 * time.Second
 
-	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		"https://www.googleapis.com/oauth2/v2/userinfo",
+		nil,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("userinfo request build failed: %w", err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("userinfo request failed: %w", err)
 	}

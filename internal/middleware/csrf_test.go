@@ -64,7 +64,7 @@ func TestCSRF_RequireCSRF_BlocksWithoutToken(t *testing.T) {
 
 	// POST without CSRF token should be rejected.
 	form := url.Values{}
-	req := httptest.NewRequest(http.MethodPost, "/action", strings.NewReader(form.Encode()))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/action", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: "session", Value: "sess-123"})
 	rec := httptest.NewRecorder()
@@ -96,7 +96,7 @@ func TestCSRF_RequireCSRF_AllowsValidToken(t *testing.T) {
 	token := csrf.Token("sess-123")
 
 	form := url.Values{middleware.CSRFFormFieldName: {token}}
-	req := httptest.NewRequest(http.MethodPost, "/action", strings.NewReader(form.Encode()))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/action", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: "session", Value: "sess-123"})
 	rec := httptest.NewRecorder()
@@ -120,7 +120,7 @@ func TestCSRF_RequireCSRF_AllowsGET(t *testing.T) {
 	getSessionID := func(r *http.Request) string { return "sess-123" }
 	handler := csrf.RequireCSRF(getSessionID)(inner)
 
-	req := httptest.NewRequest(http.MethodGet, "/page", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/page", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 

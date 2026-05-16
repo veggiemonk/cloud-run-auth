@@ -22,6 +22,13 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		slog.Error("fatal", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
@@ -30,16 +37,14 @@ func main() {
 	// Decode encryption key (base64 → raw bytes).
 	encKey, err := base64.StdEncoding.DecodeString(cfg.SessionEncryptionKey)
 	if err != nil || len(encKey) != 32 {
-		slog.Error("SESSION_ENCRYPTION_KEY must be a base64-encoded 32-byte key")
-		os.Exit(1)
+		return errors.New("SESSION_ENCRYPTION_KEY must be a base64-encoded 32-byte key")
 	}
 
 	// Initialize Firestore session store with encryption.
 	ctx := context.Background()
 	store, err := session.NewStore(ctx, cfg.ProjectID, cfg.FirestoreDB, encKey)
 	if err != nil {
-		slog.Error("failed to initialize session store", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to initialize session store: %w", err)
 	}
 	defer func() {
 		if err := store.Close(); err != nil {
@@ -50,8 +55,7 @@ func main() {
 	// Create OAuth config.
 	oauthCfg, err := newGoogleConfig(cfg)
 	if err != nil {
-		slog.Error("failed to create OAuth config", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create OAuth config: %w", err)
 	}
 
 	// Cookie config (production vs dev).
@@ -60,8 +64,7 @@ func main() {
 	// CSRF protection.
 	csrf, err := middleware.NewCSRF(cfg.CSRFKey)
 	if err != nil {
-		slog.Error("failed to initialize CSRF", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to initialize CSRF: %w", err)
 	}
 
 	// Auth dependencies.
@@ -86,8 +89,7 @@ func main() {
 	// Static files.
 	staticFS, err := fs.Sub(assets.StaticFiles, "static")
 	if err != nil {
-		slog.Error("failed to create static sub-filesystem", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create static sub-filesystem: %w", err)
 	}
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
@@ -142,9 +144,9 @@ func main() {
 
 	slog.Info("starting production OAuth server", "port", cfg.Port, "secure", cookies.Secure)
 	if err := srv.ListenAndServe(); err != nil {
-		slog.Error("server failed", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("server failed: %w", err)
 	}
+	return nil
 }
 
 // newGoogleConfig creates an OAuth2 config from either GOOGLE_OAUTH_CONFIG JSON

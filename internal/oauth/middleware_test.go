@@ -15,7 +15,7 @@ func TestRequireAuth_NoCookie(t *testing.T) {
 	})
 
 	handler := RequireAuth(store, next)
-	req := httptest.NewRequest("GET", "/protected", nil)
+	req := httptest.NewRequestWithContext(t.Context(), "GET", "/protected", nil)
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)
@@ -35,7 +35,7 @@ func TestRequireAuth_InvalidSession(t *testing.T) {
 	})
 
 	handler := RequireAuth(store, next)
-	req := httptest.NewRequest("GET", "/protected", nil)
+	req := httptest.NewRequestWithContext(t.Context(), "GET", "/protected", nil)
 	req.AddCookie(&http.Cookie{Name: "session_id", Value: "nonexistent"})
 	rr := httptest.NewRecorder()
 
@@ -58,7 +58,7 @@ func TestRequireAuth_ValidSession(t *testing.T) {
 	})
 
 	handler := RequireAuth(store, next)
-	req := httptest.NewRequest("GET", "/protected", nil)
+	req := httptest.NewRequestWithContext(t.Context(), "GET", "/protected", nil)
 	req.AddCookie(&http.Cookie{Name: "session_id", Value: session.ID})
 	rr := httptest.NewRecorder()
 
@@ -79,7 +79,7 @@ func TestRequireAuth_ValidSession(t *testing.T) {
 }
 
 func TestUserFromContext_NilWhenMissing(t *testing.T) {
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), "GET", "/", nil)
 	user := UserFromContext(req.Context())
 	if user != nil {
 		t.Error("expected nil user from empty context")

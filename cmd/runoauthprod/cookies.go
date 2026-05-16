@@ -25,8 +25,10 @@ func NewCookieConfig(kRevision string) CookieConfig {
 }
 
 // NewCookie creates an http.Cookie with security settings appropriate for the environment.
+// HttpOnly and SameSite are always set; Secure is driven by CookieConfig.Secure so that
+// local non-HTTPS development still works while Cloud Run deployments use the __Host- prefix.
 func (cc CookieConfig) NewCookie(name, value string, maxAge int) *http.Cookie {
-	return &http.Cookie{
+	return &http.Cookie{ // #nosec G124 -- HttpOnly+SameSite always set; Secure driven by env (HTTPS on Cloud Run, off for local dev).
 		Name:     name,
 		Value:    value,
 		Path:     "/",

@@ -8,7 +8,7 @@ import (
 )
 
 func TestDetect_NoHeaders(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	det := Detect(r)
 
 	if det.HasJWT {
@@ -26,7 +26,7 @@ func TestDetect_NoHeaders(t *testing.T) {
 }
 
 func TestDetect_JWTOnly(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	r.Header.Set(HeaderJWTAssertion, "header.payload.signature")
 	det := Detect(r)
 
@@ -45,7 +45,7 @@ func TestDetect_JWTOnly(t *testing.T) {
 }
 
 func TestDetect_EmailAndIDWithoutJWT(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	r.Header.Set(HeaderAuthenticatedEmail, "accounts.google.com:user@example.com")
 	r.Header.Set(HeaderAuthenticatedID, "accounts.google.com:12345")
 	det := Detect(r)
@@ -71,7 +71,7 @@ func TestDetect_EmailAndIDWithoutJWT(t *testing.T) {
 }
 
 func TestDetect_AllHeaders(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	r.Header.Set(HeaderJWTAssertion, "a.b.c")
 	r.Header.Set(HeaderAuthenticatedEmail, "accounts.google.com:user@example.com")
 	r.Header.Set(HeaderAuthenticatedID, "accounts.google.com:12345")
@@ -86,7 +86,7 @@ func TestDetect_AllHeaders(t *testing.T) {
 }
 
 func TestDetect_EmailWithoutPrefix(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	r.Header.Set(HeaderJWTAssertion, "a.b.c")
 	r.Header.Set(HeaderAuthenticatedEmail, "user@example.com")
 	det := Detect(r)

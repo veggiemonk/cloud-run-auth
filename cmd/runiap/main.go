@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/veggiemonk/cloud-run-auth/internal/assets"
 	"github.com/veggiemonk/cloud-run-auth/internal/handler/iaphandler"
@@ -70,8 +71,17 @@ func main() {
 		port = "8080"
 	}
 
+	srv := &http.Server{
+		Addr:              ":" + port,
+		Handler:           wrapped,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
 	slog.Info("starting server", "port", port)
-	if err := http.ListenAndServe(":"+port, wrapped); err != nil {
+	if err := srv.ListenAndServe(); err != nil {
 		slog.Error("server failed", "error", err)
 		os.Exit(1)
 	}

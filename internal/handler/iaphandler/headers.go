@@ -13,7 +13,7 @@ import (
 // Headers returns a handler that displays all request headers.
 func Headers() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var entries []iapui.HeaderEntry
+		entries := make([]iapui.HeaderEntry, 0, len(r.Header))
 
 		for name, values := range r.Header {
 			entries = append(entries, iapui.HeaderEntry{

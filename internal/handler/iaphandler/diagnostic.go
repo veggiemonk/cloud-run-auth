@@ -41,19 +41,20 @@ func Diagnostic(verifier *iap.Verifier) http.HandlerFunc {
 			}
 
 			// Check 2: Signature valid?
-			if result.Valid {
+			switch {
+			case result.Valid:
 				checks = append(checks, iapui.Check{
 					Name:   "Signature Valid",
 					Status: "pass",
 					Detail: "JWT signature verified with Google's public keys",
 				})
-			} else if verifier.ExpectedAudience() == "" {
+			case verifier.ExpectedAudience() == "":
 				checks = append(checks, iapui.Check{
 					Name:   "Signature Valid",
 					Status: "warn",
 					Detail: "Cannot verify signature: IAP_AUDIENCE not configured",
 				})
-			} else {
+			default:
 				checks = append(checks, iapui.Check{
 					Name:   "Signature Valid",
 					Status: "fail",

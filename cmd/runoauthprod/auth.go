@@ -211,7 +211,12 @@ func (d *authDeps) requireAuthWithRefresh(next http.Handler) http.Handler {
 				return newTok, nil
 			})
 			if err == nil {
-				tok = refreshed.(*oauth2.Token)
+				newTok, ok := refreshed.(*oauth2.Token)
+				if !ok {
+					slog.Error("token refresh returned unexpected type", "session", sessionID)
+				} else {
+					tok = newTok
+				}
 			} else {
 				slog.Warn("token refresh failed", "error", err, "session", sessionID)
 			}
@@ -252,7 +257,12 @@ func fetchUserInfoProd(ctx context.Context, cfg *oauth2.Config, token *oauth2.To
 	client := cfg.Client(ctx, token)
 	client.Timeout = 10 * time.Second
 
-	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
+	const userinfoURL = "https://www.googleapis.com/oauth2/v2/userinfo"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, userinfoURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("userinfo request build failed: %w", err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("userinfo request failed: %w", err)
 	}

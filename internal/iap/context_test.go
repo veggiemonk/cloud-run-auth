@@ -7,7 +7,7 @@ import (
 )
 
 func TestDetectionResultFromContext_WithStoredResult(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 
 	det := DetectionResult{
 		HasJWT: true,
@@ -27,7 +27,7 @@ func TestDetectionResultFromContext_WithStoredResult(t *testing.T) {
 }
 
 func TestDetectionResultFromContext_FallsBackToDetect(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	r.Header.Set(HeaderJWTAssertion, "a.b.c")
 	r.Header.Set(HeaderAuthenticatedEmail, "accounts.google.com:fallback@example.com")
 

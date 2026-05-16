@@ -14,7 +14,7 @@ func TestSecurityHeaders(t *testing.T) {
 	})
 
 	handler := middleware.SecurityHeaders(inner)
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 

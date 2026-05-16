@@ -41,19 +41,20 @@ func Diagnostic() http.HandlerFunc {
 
 		// Check 2: Token not expired?
 		if user.Token != nil {
-			if user.Token.Expiry.IsZero() {
+			switch {
+			case user.Token.Expiry.IsZero():
 				checks = append(checks, oauthui.Check{
 					Name:   "Token Expiry",
 					Status: "warn",
 					Detail: "Token has no expiry set",
 				})
-			} else if user.Token.Expiry.After(time.Now()) {
+			case user.Token.Expiry.After(time.Now()):
 				checks = append(checks, oauthui.Check{
 					Name:   "Token Expiry",
 					Status: "pass",
 					Detail: "Token expires at " + user.Token.Expiry.Format(time.RFC3339),
 				})
-			} else {
+			default:
 				checks = append(checks, oauthui.Check{
 					Name:   "Token Expiry",
 					Status: "fail",

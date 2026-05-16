@@ -41,11 +41,18 @@ func (rl *IPRateLimiter) Limit(next http.Handler) http.Handler {
 
 func (rl *IPRateLimiter) limiterFor(ip string) *rate.Limiter {
 	if v, ok := rl.visitors.Load(ip); ok {
-		return v.(*rate.Limiter)
+		if limiter, ok := v.(*rate.Limiter); ok {
+			return limiter
+		}
 	}
 	limiter := rate.NewLimiter(rl.limit, rl.burst)
 	actual, _ := rl.visitors.LoadOrStore(ip, limiter)
-	return actual.(*rate.Limiter)
+	if existing, ok := actual.(*rate.Limiter); ok {
+		return existing
+	}
+	// Map held an unexpected type; replace with a fresh limiter.
+	rl.visitors.Store(ip, limiter)
+	return limiter
 }
 
 // UserRateLimiter provides per-user rate limiting using an email extractor function.
@@ -84,11 +91,18 @@ func (rl *UserRateLimiter) Limit(next http.Handler) http.Handler {
 
 func (rl *UserRateLimiter) allow(email string) bool {
 	if v, ok := rl.users.Load(email); ok {
-		return v.(*rate.Limiter).Allow()
+		if limiter, ok := v.(*rate.Limiter); ok {
+			return limiter.Allow()
+		}
 	}
 	limiter := rate.NewLimiter(rl.limit, rl.burst)
 	actual, _ := rl.users.LoadOrStore(email, limiter)
-	return actual.(*rate.Limiter).Allow()
+	if existing, ok := actual.(*rate.Limiter); ok {
+		return existing.Allow()
+	}
+	// Map held an unexpected type; replace with a fresh limiter.
+	rl.users.Store(email, limiter)
+	return limiter.Allow()
 }
 
 // ClientIP extracts the client IP from the request, preferring the first
