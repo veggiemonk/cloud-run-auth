@@ -7,6 +7,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -207,7 +208,7 @@ func (s *Store) encrypt(plaintext []byte) ([]byte, error) {
 // decrypt decrypts ciphertext produced by encrypt (nonce || ciphertext).
 func (s *Store) decrypt(ciphertext []byte) ([]byte, error) {
 	if len(ciphertext) < gcmNonceSize {
-		return nil, fmt.Errorf("ciphertext too short")
+		return nil, errors.New("ciphertext too short")
 	}
 	nonce := ciphertext[:gcmNonceSize]
 	return s.aead.Open(nil, nonce, ciphertext[gcmNonceSize:], nil)

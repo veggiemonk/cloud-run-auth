@@ -82,13 +82,17 @@ func Diagnostic(verifier *iap.Verifier) http.HandlerFunc {
 					checks = append(checks, iapui.Check{
 						Name:   "Token Expiry",
 						Status: "pass",
-						Detail: "Token expires at " + result.Claims.ExpiresAt.Format(time.RFC3339),
+						Detail: "Token expires at " + result.Claims.ExpiresAt.Format(
+							time.RFC3339,
+						),
 					})
 				} else if !result.Claims.ExpiresAt.IsZero() {
 					checks = append(checks, iapui.Check{
 						Name:   "Token Expiry",
 						Status: "fail",
-						Detail: "Token expired at " + result.Claims.ExpiresAt.Format(time.RFC3339),
+						Detail: "Token expired at " + result.Claims.ExpiresAt.Format(
+							time.RFC3339,
+						),
 					})
 				}
 			}

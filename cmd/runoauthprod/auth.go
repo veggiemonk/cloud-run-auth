@@ -200,7 +200,11 @@ func (d *authDeps) requireAuthWithRefresh(next http.Handler) http.Handler {
 					return nil, err
 				}
 				if newTok.AccessToken != tok.AccessToken {
-					if updateErr := d.store.UpdateToken(r.Context(), sessionID, newTok); updateErr != nil {
+					if updateErr := d.store.UpdateToken(
+						r.Context(),
+						sessionID,
+						newTok,
+					); updateErr != nil {
 						slog.Error("failed to update token", "error", updateErr)
 					}
 				}

@@ -22,7 +22,9 @@ func main() {
 	// Warn at startup if IAP_AUDIENCE is not configured on Cloud Run.
 	if verifier.ExpectedAudience() == "" {
 		if os.Getenv("K_SERVICE") != "" {
-			slog.Error("IAP_AUDIENCE environment variable is not set — JWT verification is disabled. Set IAP_AUDIENCE to enable signature verification.")
+			slog.Error(
+				"IAP_AUDIENCE environment variable is not set — JWT verification is disabled. Set IAP_AUDIENCE to enable signature verification.",
+			)
 		} else {
 			slog.Warn("IAP_AUDIENCE not set — running in local/dev mode, JWT verification disabled")
 		}

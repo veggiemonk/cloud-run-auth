@@ -1,6 +1,7 @@
 package session
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"testing"
@@ -33,7 +34,7 @@ func TestEncryptDecrypt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if string(encrypted) == string(plaintext) {
+	if bytes.Equal(encrypted, plaintext) {
 		t.Error("encrypted should differ from plaintext")
 	}
 
@@ -42,7 +43,7 @@ func TestEncryptDecrypt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if string(decrypted) != string(plaintext) {
+	if !bytes.Equal(decrypted, plaintext) {
 		t.Errorf("decrypted = %q, want %q", decrypted, plaintext)
 	}
 }
@@ -54,13 +55,13 @@ func TestEncryptDecrypt_DifferentCiphertexts(t *testing.T) {
 	enc1, _ := s.encrypt(plaintext)
 	enc2, _ := s.encrypt(plaintext)
 
-	if string(enc1) == string(enc2) {
+	if bytes.Equal(enc1, enc2) {
 		t.Error("two encryptions of same plaintext should differ (random nonce)")
 	}
 
 	dec1, _ := s.decrypt(enc1)
 	dec2, _ := s.decrypt(enc2)
-	if string(dec1) != string(dec2) {
+	if !bytes.Equal(dec1, dec2) {
 		t.Error("both should decrypt to same value")
 	}
 }

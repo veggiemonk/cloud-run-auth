@@ -2,11 +2,26 @@
 
 # gorelease generated files
 /dist
-# makefile generated files
+# build output
 /bin
-# go build output
+# stray go build output at repo root
 /runiap
 /runoauth
 /runoauthprod
 # templ generated files
 *_templ.go
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# test + coverage + worktrees
+*.test
+coverage.out
+/.worktrees/
+_thirdparty
+
+# release artefacts (cosign / SBOM)
+*.sbom.json
+*.sig

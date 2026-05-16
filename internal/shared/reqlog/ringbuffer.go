@@ -58,7 +58,7 @@ func (b *Buffer) Entries() []Entry {
 	}
 
 	result := make([]Entry, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		// Walk backwards from the most recent entry.
 		idx := (b.pos - 1 - i + maxEntries) % maxEntries
 		result[i] = b.entries[idx]

@@ -11,6 +11,7 @@ import (
 // StatusWriter wraps http.ResponseWriter to capture the status code.
 type StatusWriter struct {
 	http.ResponseWriter
+
 	Status int
 }
 
@@ -41,7 +42,12 @@ func LoggingMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 // RequestLogMiddleware records each request into the ring buffer.
 // emailExtractor extracts the email from the request (app-specific).
 // authType is the authentication type string (e.g., "iap", "oauth", "").
-func RequestLogMiddleware(buf *reqlog.Buffer, emailExtractor func(*http.Request) string, authType string, next http.Handler) http.Handler {
+func RequestLogMiddleware(
+	buf *reqlog.Buffer,
+	emailExtractor func(*http.Request) string,
+	authType string,
+	next http.Handler,
+) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		next.ServeHTTP(w, r)
 

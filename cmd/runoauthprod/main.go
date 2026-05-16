@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -170,7 +171,9 @@ func newGoogleConfig(cfg Config) (*oauth2.Config, error) {
 
 	// Fallback: individual env vars (local dev).
 	if cfg.Google.ClientID == "" || cfg.Google.ClientSecret == "" {
-		return nil, fmt.Errorf("either GOOGLE_OAUTH_CONFIG or both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required")
+		return nil, errors.New(
+			"either GOOGLE_OAUTH_CONFIG or both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required",
+		)
 	}
 	return &oauth2.Config{
 		ClientID:     cfg.Google.ClientID,

@@ -81,7 +81,11 @@ func TestDecode_InvalidFormat(t *testing.T) {
 		{"one dot", "one.dot", "invalid JWT format"},
 		{"bad base64 header", "!!!.cGF5bG9hZA.sig", "failed to decode JWT header"},
 		{"bad base64 payload", "aGVhZGVy.!!!.sig", "failed to decode JWT payload"},
-		{"invalid header json", base64.RawURLEncoding.EncodeToString([]byte("not json")) + ".cA.sig", "failed to parse JWT header JSON"},
+		{
+			"invalid header json",
+			base64.RawURLEncoding.EncodeToString([]byte("not json")) + ".cA.sig",
+			"failed to parse JWT header JSON",
+		},
 	}
 
 	for _, tt := range tests {
