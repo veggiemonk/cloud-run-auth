@@ -1,6 +1,14 @@
+// Runoauth owns the local/dev OAuth demo binary: a single HTTP process
+// wiring the Google OAuth flow (internal/oauth) to the in-memory session
+// store and the shared dashboard handlers (internal/handler/oauthhandler).
+//
+// Exists as a no-secrets-stored counterpart to runoauthprod — useful for
+// local development against real Google OAuth without provisioning
+// Firestore, CSRF keys, or session encryption.
 package main
 
 import (
+	"fmt"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -8,32 +16,41 @@ import (
 	"time"
 
 	"github.com/veggiemonk/cloud-run-auth/internal/assets"
+	"github.com/veggiemonk/cloud-run-auth/internal/config"
 	"github.com/veggiemonk/cloud-run-auth/internal/handler/oauthhandler"
+	"github.com/veggiemonk/cloud-run-auth/internal/log"
 	"github.com/veggiemonk/cloud-run-auth/internal/oauth"
 	"github.com/veggiemonk/cloud-run-auth/internal/shared"
 	"github.com/veggiemonk/cloud-run-auth/internal/shared/reqlog"
+	"github.com/veggiemonk/cloud-run-auth/internal/version"
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
-
-	clientID := os.Getenv("GOOGLE_CLIENT_ID")
-	clientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
-	redirectURL := os.Getenv("OAUTH_REDIRECT_URL")
-
-	if clientID == "" || clientSecret == "" {
-		slog.Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set")
+	if err := run(); err != nil {
+		slog.Error("fatal", "error", err)
 		os.Exit(1)
 	}
+}
 
-	if redirectURL == "" {
-		redirectURL = "http://localhost:8080/auth/callback"
-		slog.Warn("OAUTH_REDIRECT_URL not set, using default", "url", redirectURL)
+func run() error {
+	cfg, help, err := config.LoadOAuth()
+	if err != nil {
+		return err
+	}
+	if help != "" {
+		fmt.Println(help)
+		return nil
 	}
 
-	cfg := oauth.NewGoogleConfig(clientID, clientSecret, redirectURL)
-	sessions := oauth.NewSessionStore(cfg)
+	logger := log.New(os.Stdout, cfg.LogOptions())
+	slog.SetDefault(logger)
+
+	if dump, err := config.String(&cfg); err == nil {
+		slog.Info("startup", "version", version.Get(), "config", dump)
+	}
+
+	oauthCfg := oauth.NewGoogleConfig(cfg.ClientID, cfg.ClientSecret, cfg.RedirectURL)
+	sessions := oauth.NewSessionStore(oauthCfg)
 	sessions.StartCleanup(5 * time.Minute)
 	buf := reqlog.NewBuffer()
 
@@ -42,8 +59,7 @@ func main() {
 	// Static files.
 	staticFS, err := fs.Sub(assets.StaticFiles, "static")
 	if err != nil {
-		slog.Error("failed to create static sub-filesystem", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("static sub-filesystem: %w", err)
 	}
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
@@ -51,8 +67,8 @@ func main() {
 	mux.Handle("GET /healthz", oauthhandler.Healthz())
 
 	// Auth routes (public).
-	mux.Handle("GET /auth/login", oauth.LoginHandler(cfg, sessions))
-	mux.Handle("GET /auth/callback", oauth.CallbackHandler(cfg, sessions))
+	mux.Handle("GET /auth/login", oauth.LoginHandler(oauthCfg, sessions))
+	mux.Handle("GET /auth/callback", oauth.CallbackHandler(oauthCfg, sessions))
 	mux.Handle("GET /auth/logout", oauth.LogoutHandler(sessions))
 
 	// Protected routes.
@@ -79,13 +95,8 @@ func main() {
 
 	wrapped := shared.LoggingMiddleware(logger, shared.RequestLogMiddleware(buf, oauthEmailExtractor, "oauth", mux))
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
 	srv := &http.Server{
-		Addr:              ":" + port,
+		Addr:              ":" + cfg.Port,
 		Handler:           wrapped,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
@@ -93,9 +104,9 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 
-	slog.Info("starting server", "port", port)
+	slog.Info("starting server", "port", cfg.Port)
 	if err := srv.ListenAndServe(); err != nil {
-		slog.Error("server failed", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("server failed: %w", err)
 	}
+	return nil
 }

@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/veggiemonk/cloud-run-auth/internal/is"
 )
 
 func TestBuffer_AddAndEntries(t *testing.T) {
@@ -14,24 +16,16 @@ func TestBuffer_AddAndEntries(t *testing.T) {
 	buf.Add(Entry{Method: "POST", Path: "/second"})
 
 	entries := buf.Entries()
-	if len(entries) != 2 {
-		t.Fatalf("expected 2 entries, got %d", len(entries))
-	}
+	is.Equal(t, len(entries), 2, "")
 	// Newest first.
-	if entries[0].Path != "/second" {
-		t.Errorf("expected newest first, got: %s", entries[0].Path)
-	}
-	if entries[1].Path != "/first" {
-		t.Errorf("expected oldest last, got: %s", entries[1].Path)
-	}
+	is.Equal(t, entries[0].Path, "/second", "newest first")
+	is.Equal(t, entries[1].Path, "/first", "oldest last")
 }
 
 func TestBuffer_Empty(t *testing.T) {
 	buf := NewBuffer()
 	entries := buf.Entries()
-	if len(entries) != 0 {
-		t.Fatalf("expected 0 entries, got %d", len(entries))
-	}
+	is.Equal(t, len(entries), 0, "")
 }
 
 func TestBuffer_Wraparound(t *testing.T) {
@@ -46,21 +40,13 @@ func TestBuffer_Wraparound(t *testing.T) {
 	}
 
 	entries := buf.Entries()
-	if len(entries) != maxEntries {
-		t.Fatalf("expected %d entries after wraparound, got %d", maxEntries, len(entries))
-	}
+	is.Equal(t, len(entries), maxEntries, "after wraparound")
 
 	// Most recent entry should be the last one added.
-	expectedPath := fmt.Sprintf("/%d", maxEntries+49)
-	if entries[0].Path != expectedPath {
-		t.Errorf("expected newest entry %s, got: %s", expectedPath, entries[0].Path)
-	}
+	is.Equal(t, entries[0].Path, fmt.Sprintf("/%d", maxEntries+49), "newest entry")
 
 	// Oldest entry should be the first one that survived the wraparound.
-	oldestPath := fmt.Sprintf("/%d", 50)
-	if entries[maxEntries-1].Path != oldestPath {
-		t.Errorf("expected oldest entry %s, got: %s", oldestPath, entries[maxEntries-1].Path)
-	}
+	is.Equal(t, entries[maxEntries-1].Path, fmt.Sprintf("/%d", 50), "oldest entry")
 }
 
 func TestBuffer_ConcurrentAccess(t *testing.T) {
@@ -95,9 +81,7 @@ func TestBuffer_ConcurrentAccess(t *testing.T) {
 
 	// After all writes, buffer should be full (1000 writes > maxEntries).
 	entries := buf.Entries()
-	if len(entries) != maxEntries {
-		t.Errorf("expected %d entries, got %d", maxEntries, len(entries))
-	}
+	is.Equal(t, len(entries), maxEntries, "")
 }
 
 func TestBuffer_EntriesReturnsCopy(t *testing.T) {
@@ -109,7 +93,5 @@ func TestBuffer_EntriesReturnsCopy(t *testing.T) {
 
 	// Verify the buffer is not affected.
 	fresh := buf.Entries()
-	if fresh[0].Path != "/original" {
-		t.Error("Entries() should return a copy, but buffer was modified")
-	}
+	is.Equal(t, fresh[0].Path, "/original", "buffer should not be mutated by caller")
 }

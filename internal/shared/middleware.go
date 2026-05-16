@@ -1,3 +1,12 @@
+// Package shared owns the HTTP middleware reused by every binary under
+// cmd/: the slog request logger and the ring-buffer request recorder
+// that feeds the on-page "/log" view, plus the StatusWriter that lets
+// the logger see the response code.
+//
+// Exists to keep cross-cutting wiring (logging, in-memory request log)
+// out of each binary's main() — every cmd composes the same outer
+// LoggingMiddleware + RequestLogMiddleware pair, parameterised only by
+// the binary-specific email extractor and auth-type label.
 package shared
 
 import (

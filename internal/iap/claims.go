@@ -1,3 +1,14 @@
+// Package iap owns everything the binaries need to consume Google
+// Identity-Aware Proxy: the X-Goog-* header constants, the parsed Claims
+// shape, header detection (Detect), JWT signature verification against
+// Google's keys (Verifier), and the request-context plumbing that lets
+// handlers read the detection result without re-parsing.
+//
+// Exists so the JWT-trust boundary lives in one place. Without
+// verification, IAP's unsigned email/ID headers are spoofable by any
+// caller that can reach the service — so this package centralises the
+// "is this request really from IAP" decision and surfaces a warning
+// whenever unsigned headers appear without a JWT.
 package iap
 
 import "time"

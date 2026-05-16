@@ -1,6 +1,16 @@
+// Runiap owns the IAP-fronted demo binary: a Cloud Run service that
+// expects Google IAP in front of it and exposes diagnostic pages
+// (dashboard, headers, JWT inspector, audience checker, log) for
+// inspecting the identity Google injects via X-Goog-* headers.
+//
+// Exists as a debugging/learning surface for IAP — when IAP_AUDIENCE is
+// set, requests are gated on a verified JWT (internal/iap); when unset,
+// the binary still runs locally with verification disabled so the UI
+// remains useful in dev.
 package main
 
 import (
+	"fmt"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -8,21 +18,44 @@ import (
 	"time"
 
 	"github.com/veggiemonk/cloud-run-auth/internal/assets"
+	"github.com/veggiemonk/cloud-run-auth/internal/config"
 	"github.com/veggiemonk/cloud-run-auth/internal/handler/iaphandler"
 	"github.com/veggiemonk/cloud-run-auth/internal/iap"
+	"github.com/veggiemonk/cloud-run-auth/internal/log"
 	"github.com/veggiemonk/cloud-run-auth/internal/shared"
 	"github.com/veggiemonk/cloud-run-auth/internal/shared/reqlog"
+	"github.com/veggiemonk/cloud-run-auth/internal/version"
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	if err := run(); err != nil {
+		slog.Error("fatal", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	cfg, help, err := config.LoadIAP()
+	if err != nil {
+		return err
+	}
+	if help != "" {
+		fmt.Println(help)
+		return nil
+	}
+
+	logger := log.New(os.Stdout, cfg.LogOptions())
 	slog.SetDefault(logger)
 
-	verifier := iap.NewVerifier()
+	if dump, err := config.String(&cfg); err == nil {
+		slog.Info("startup", "version", version.Get(), "config", dump)
+	}
+
+	verifier := iap.NewVerifier(cfg.Audience)
 
 	// Warn at startup if IAP_AUDIENCE is not configured on Cloud Run.
 	if verifier.ExpectedAudience() == "" {
-		if os.Getenv("K_SERVICE") != "" {
+		if cfg.KService != "" {
 			slog.Error(
 				"IAP_AUDIENCE environment variable is not set — JWT verification is disabled. Set IAP_AUDIENCE to enable signature verification.",
 			)
@@ -38,8 +71,7 @@ func main() {
 	// Static files (no auth required).
 	staticFS, err := fs.Sub(assets.StaticFiles, "static")
 	if err != nil {
-		slog.Error("failed to create static sub-filesystem", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("static sub-filesystem: %w", err)
 	}
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
@@ -66,13 +98,8 @@ func main() {
 	// Wrap with middleware.
 	wrapped := shared.LoggingMiddleware(logger, shared.RequestLogMiddleware(buf, iapEmailExtractor, "iap", mux))
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
 	srv := &http.Server{
-		Addr:              ":" + port,
+		Addr:              ":" + cfg.Port,
 		Handler:           wrapped,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
@@ -80,11 +107,11 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 
-	slog.Info("starting server", "port", port)
+	slog.Info("starting server", "port", cfg.Port)
 	if err := srv.ListenAndServe(); err != nil {
-		slog.Error("server failed", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("server failed: %w", err)
 	}
+	return nil
 }
 
 // requireIAP rejects requests that don't have a valid IAP JWT.

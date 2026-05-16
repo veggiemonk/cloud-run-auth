@@ -1,3 +1,12 @@
+// Package iapui owns the templ view models and generated page renderers
+// for the runiap diagnostic UI: dashboard, headers, JWT inspector,
+// audience checker, request log, and diagnostic check pages, plus the
+// IAPNav shared with the layout chrome in internal/shared/components.
+//
+// Exists to keep render-only concerns (struct shapes the templates
+// consume, IAP-app nav layout) out of the iaphandler package — handlers
+// build a *Data struct from internal/iap and hand it to the templ page;
+// the view layer never reaches back into the auth model.
 package iapui
 
 import (

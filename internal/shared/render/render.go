@@ -1,3 +1,10 @@
+// Package render owns the response content-negotiation helpers used by
+// every diagnostic handler: WantsJSON (decide HTML vs JSON from query
+// param or Accept header) and JSON (write a well-formed JSON response).
+//
+// Exists so each handler can offer both an HTMX-rendered page and a
+// scriptable JSON view from the same code path, without each handler
+// reinventing the negotiation rules.
 package render
 
 import (

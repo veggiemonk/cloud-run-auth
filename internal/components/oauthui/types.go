@@ -1,3 +1,12 @@
+// Package oauthui owns the templ view models and generated page
+// renderers for the runoauth/runoauthprod dashboard UI: dashboard, token
+// inspector, GCP project explorer, and diagnostic check pages, plus the
+// OAuthNav shared with the layout chrome in internal/shared/components.
+//
+// Exists to keep render-only concerns out of the oauthhandler package —
+// handlers compose a *Data struct from session + oauth context and hand
+// it to the templ page; the view layer never reaches back into the auth
+// model.
 package oauthui
 
 import shared "github.com/veggiemonk/cloud-run-auth/internal/shared/components"

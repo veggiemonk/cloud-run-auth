@@ -1,3 +1,10 @@
+// Runoauthprod owns the production OAuth binary: Google OAuth with
+// Firestore-backed encrypted sessions (internal/session), CSRF, rate
+// limiting, body limits, and security headers (internal/middleware), plus
+// allowed-domain gating against an org's Workspace HD.
+//
+// Exists as the hardened deployment target for Cloud Run — runoauth is the
+// dev counterpart with the same handlers but in-memory state.
 package main
 
 import (
@@ -11,14 +18,32 @@ import (
 	"os"
 	"time"
 
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+
 	"github.com/veggiemonk/cloud-run-auth/internal/assets"
+	"github.com/veggiemonk/cloud-run-auth/internal/closeutil"
+	"github.com/veggiemonk/cloud-run-auth/internal/config"
 	"github.com/veggiemonk/cloud-run-auth/internal/handler/oauthhandler"
+	"github.com/veggiemonk/cloud-run-auth/internal/log"
 	"github.com/veggiemonk/cloud-run-auth/internal/middleware"
 	"github.com/veggiemonk/cloud-run-auth/internal/session"
 	"github.com/veggiemonk/cloud-run-auth/internal/shared"
 	"github.com/veggiemonk/cloud-run-auth/internal/shared/reqlog"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
+	"github.com/veggiemonk/cloud-run-auth/internal/version"
+)
+
+// Protocol/security constants — intentionally not env-driven. Touching
+// these is a code change reviewed alongside the security model, not an
+// ops knob.
+const (
+	MaxBodyBytes           = 10 << 20 // 10 MiB
+	ReadTimeout            = 15 * time.Second
+	ReadHeaderTimeout      = 5 * time.Second
+	IdleTimeout            = 60 * time.Second
+	OAuthStateCookieMaxAge = 300   // 5 minutes
+	SessionCookieMaxAge    = 86400 // 24 hours
+	TokenRefreshThreshold  = 5 * time.Minute
 )
 
 func main() {
@@ -28,11 +53,22 @@ func main() {
 	}
 }
 
-func run() error {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+func run() (err error) {
+	cfg, help, err := config.LoadOAuthProd()
+	if err != nil {
+		return err
+	}
+	if help != "" {
+		fmt.Println(help)
+		return nil
+	}
+
+	logger := log.New(os.Stdout, cfg.LogOptions())
 	slog.SetDefault(logger)
 
-	cfg := MustParse()
+	if dump, err := config.String(&cfg); err == nil {
+		slog.Info("startup", "version", version.Get(), "config", dump)
+	}
 
 	// Decode encryption key (base64 → raw bytes).
 	encKey, err := base64.StdEncoding.DecodeString(cfg.SessionEncryptionKey)
@@ -46,11 +82,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize session store: %w", err)
 	}
-	defer func() {
-		if err := store.Close(); err != nil {
-			slog.Warn("failed to close session store", "error", err)
-		}
-	}()
+	defer closeutil.Do(&err, store.Close, "close session store")
 
 	// Create OAuth config.
 	oauthCfg, err := newGoogleConfig(cfg)
@@ -151,7 +183,7 @@ func run() error {
 
 // newGoogleConfig creates an OAuth2 config from either GOOGLE_OAUTH_CONFIG JSON
 // blob (production) or individual env vars (local dev).
-func newGoogleConfig(cfg Config) (*oauth2.Config, error) {
+func newGoogleConfig(cfg config.OAuthProd) (*oauth2.Config, error) {
 	scopes := []string{
 		"openid",
 		"email",

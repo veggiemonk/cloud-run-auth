@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"golang.org/x/oauth2"
+
+	"github.com/veggiemonk/cloud-run-auth/internal/is"
 )
 
 func TestRequireAuth_NoCookie(t *testing.T) {
@@ -20,12 +22,8 @@ func TestRequireAuth_NoCookie(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusFound {
-		t.Errorf("expected 302, got %d", rr.Code)
-	}
-	if loc := rr.Header().Get("Location"); loc != "/auth/login" {
-		t.Errorf("expected redirect to /auth/login, got %s", loc)
-	}
+	is.Equal(t, rr.Code, http.StatusFound, "")
+	is.Equal(t, rr.Header().Get("Location"), "/auth/login", "")
 }
 
 func TestRequireAuth_InvalidSession(t *testing.T) {
@@ -41,9 +39,7 @@ func TestRequireAuth_InvalidSession(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusFound {
-		t.Errorf("expected 302, got %d", rr.Code)
-	}
+	is.Equal(t, rr.Code, http.StatusFound, "")
 }
 
 func TestRequireAuth_ValidSession(t *testing.T) {
@@ -64,24 +60,14 @@ func TestRequireAuth_ValidSession(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", rr.Code)
-	}
-	if gotUser == nil {
-		t.Fatal("expected user in context")
-	}
-	if gotUser.Email != "user@example.com" {
-		t.Errorf("expected email user@example.com, got %s", gotUser.Email)
-	}
-	if gotUser.Name != "Test User" {
-		t.Errorf("expected name Test User, got %s", gotUser.Name)
-	}
+	is.Equal(t, rr.Code, http.StatusOK, "")
+	is.True(t, gotUser != nil)
+	is.Equal(t, gotUser.Email, "user@example.com", "")
+	is.Equal(t, gotUser.Name, "Test User", "")
 }
 
 func TestUserFromContext_NilWhenMissing(t *testing.T) {
 	req := httptest.NewRequestWithContext(t.Context(), "GET", "/", nil)
 	user := UserFromContext(req.Context())
-	if user != nil {
-		t.Error("expected nil user from empty context")
-	}
+	is.True(t, user == nil)
 }

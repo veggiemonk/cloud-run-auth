@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/veggiemonk/cloud-run-auth/internal/is"
 	"github.com/veggiemonk/cloud-run-auth/internal/middleware"
 )
 
@@ -28,8 +29,6 @@ func TestSecurityHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if got := rec.Header().Get(tt.header); got != tt.want {
-			t.Errorf("header %s = %q, want %q", tt.header, got, tt.want)
-		}
+		is.Equal(t, rec.Header().Get(tt.header), tt.want, "header "+tt.header)
 	}
 }

@@ -1,11 +1,13 @@
 package middleware_test
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/veggiemonk/cloud-run-auth/internal/is"
 	"github.com/veggiemonk/cloud-run-auth/internal/middleware"
 )
 
@@ -21,9 +23,7 @@ func TestIPRateLimiter_BurstEnforced(t *testing.T) {
 		req.RemoteAddr = "1.2.3.4:1234"
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
-		if rec.Code != http.StatusOK {
-			t.Fatalf("request %d: got %d, want 200", i, rec.Code)
-		}
+		is.Equal(t, rec.Code, http.StatusOK, fmt.Sprintf("request %d", i))
 	}
 
 	// Next request should be rate limited.
@@ -31,9 +31,7 @@ func TestIPRateLimiter_BurstEnforced(t *testing.T) {
 	req.RemoteAddr = "1.2.3.4:1234"
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
-	if rec.Code != http.StatusTooManyRequests {
-		t.Fatalf("request after burst: got %d, want 429", rec.Code)
-	}
+	is.Equal(t, rec.Code, http.StatusTooManyRequests, "request after burst")
 }
 
 func TestIPRateLimiter_PerIPIsolation(t *testing.T) {
@@ -48,32 +46,24 @@ func TestIPRateLimiter_PerIPIsolation(t *testing.T) {
 	req.RemoteAddr = "1.1.1.1:1234"
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("IP A first request: got %d, want 200", rec.Code)
-	}
+	is.Equal(t, rec.Code, http.StatusOK, "IP A first request")
 
 	// IP B should still be allowed.
 	req = httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	req.RemoteAddr = "2.2.2.2:1234"
 	rec = httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("IP B first request: got %d, want 200", rec.Code)
-	}
+	is.Equal(t, rec.Code, http.StatusOK, "IP B first request")
 }
 
 func TestClientIP_XForwardedFor(t *testing.T) {
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	req.Header.Set("X-Forwarded-For", "10.0.0.1, 10.0.0.2")
-	if got := middleware.ClientIP(req); got != "10.0.0.1" {
-		t.Errorf("ClientIP = %q, want %q", got, "10.0.0.1")
-	}
+	is.Equal(t, middleware.ClientIP(req), "10.0.0.1", "")
 }
 
 func TestClientIP_RemoteAddr(t *testing.T) {
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	req.RemoteAddr = "192.168.1.1:4321"
-	if got := middleware.ClientIP(req); got != "192.168.1.1:4321" {
-		t.Errorf("ClientIP = %q, want %q", got, "192.168.1.1:4321")
-	}
+	is.Equal(t, middleware.ClientIP(req), "192.168.1.1:4321", "")
 }

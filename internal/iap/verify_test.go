@@ -5,19 +5,17 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/veggiemonk/cloud-run-auth/internal/is"
 )
 
 // makeJWT creates a test JWT with the given header and payload maps.
 func makeJWT(t *testing.T, header, payload map[string]any) string {
 	t.Helper()
 	h, err := json.Marshal(header)
-	if err != nil {
-		t.Fatalf("failed to marshal header: %v", err)
-	}
+	is.NoErr(t, err)
 	p, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatalf("failed to marshal payload: %v", err)
-	}
+	is.NoErr(t, err)
 	return base64.RawURLEncoding.EncodeToString(h) + "." +
 		base64.RawURLEncoding.EncodeToString(p) + "." +
 		base64.RawURLEncoding.EncodeToString([]byte("fake-signature"))
@@ -40,33 +38,15 @@ func TestDecode_ValidJWT(t *testing.T) {
 
 	result := v.Decode(jwt)
 
-	if result.Error != "" {
-		t.Fatalf("unexpected error: %s", result.Error)
-	}
-	if result.Valid {
-		t.Error("Decode should not set Valid=true (no signature verification)")
-	}
-	if result.Claims == nil {
-		t.Fatal("expected claims to be parsed")
-	}
-	if result.Claims.Email != "user@example.com" {
-		t.Errorf("expected email user@example.com, got: %s", result.Claims.Email)
-	}
-	if result.Claims.Issuer != "https://cloud.google.com/iap" {
-		t.Errorf("expected issuer https://cloud.google.com/iap, got: %s", result.Claims.Issuer)
-	}
-	if result.Claims.Subject != "12345" {
-		t.Errorf("expected subject 12345, got: %s", result.Claims.Subject)
-	}
-	if result.Header == nil {
-		t.Fatal("expected header to be parsed")
-	}
-	if result.Header["alg"] != "ES256" {
-		t.Errorf("expected alg ES256, got: %v", result.Header["alg"])
-	}
-	if result.SignatureB64 == "" {
-		t.Error("expected signature to be set")
-	}
+	is.Equal(t, result.Error, "", "no decode error")
+	is.True(t, !result.Valid)
+	is.True(t, result.Claims != nil)
+	is.Equal(t, result.Claims.Email, "user@example.com", "")
+	is.Equal(t, result.Claims.Issuer, "https://cloud.google.com/iap", "")
+	is.Equal(t, result.Claims.Subject, "12345", "")
+	is.True(t, result.Header != nil)
+	is.Equal(t, result.Header["alg"], any("ES256"), "")
+	is.True(t, result.SignatureB64 != "")
 }
 
 func TestDecode_InvalidFormat(t *testing.T) {
@@ -91,12 +71,8 @@ func TestDecode_InvalidFormat(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := v.Decode(tt.token)
-			if result.Error == "" {
-				t.Fatal("expected error")
-			}
-			if !strings.Contains(result.Error, tt.want) {
-				t.Errorf("expected error containing %q, got: %s", tt.want, result.Error)
-			}
+			is.True(t, result.Error != "")
+			is.True(t, strings.Contains(result.Error, tt.want))
 		})
 	}
 }
@@ -111,23 +87,15 @@ func TestVerify_NoAudience(t *testing.T) {
 
 	result := v.Verify(t.Context(), jwt)
 
-	if result.Valid {
-		t.Error("expected Valid=false when no audience configured")
-	}
-	if !strings.Contains(result.Error, "no IAP_AUDIENCE configured") {
-		t.Errorf("expected audience error, got: %s", result.Error)
-	}
+	is.True(t, !result.Valid)
+	is.True(t, strings.Contains(result.Error, "no IAP_AUDIENCE configured"))
 	// Claims should still be decoded even though verification failed.
-	if result.Claims == nil {
-		t.Error("expected claims to be decoded despite verification failure")
-	}
+	is.True(t, result.Claims != nil)
 }
 
 func TestExpectedAudience(t *testing.T) {
 	v := &Verifier{expectedAudience: "test-audience"}
-	if v.ExpectedAudience() != "test-audience" {
-		t.Errorf("expected test-audience, got: %s", v.ExpectedAudience())
-	}
+	is.Equal(t, v.ExpectedAudience(), "test-audience", "")
 }
 
 func TestParseClaims_AllFields(t *testing.T) {
@@ -146,35 +114,20 @@ func TestParseClaims_AllFields(t *testing.T) {
 
 	c := parseClaims(payload)
 
-	if c.Issuer != "https://cloud.google.com/iap" {
-		t.Errorf("wrong issuer: %s", c.Issuer)
-	}
-	if c.Subject != "subject-123" {
-		t.Errorf("wrong subject: %s", c.Subject)
-	}
-	if c.Email != "user@example.com" {
-		t.Errorf("wrong email: %s", c.Email)
-	}
-	if c.HostedDomain != "example.com" {
-		t.Errorf("wrong hosted domain: %s", c.HostedDomain)
-	}
-	if c.Audience != "/projects/123/global/backendServices/456" {
-		t.Errorf("wrong audience: %s", c.Audience)
-	}
-	if len(c.AccessLevels) != 2 || c.AccessLevels[0] != "level1" {
-		t.Errorf("wrong access levels: %v", c.AccessLevels)
-	}
-	if c.IssuedAt.Unix() != 1700000000 {
-		t.Errorf("wrong iat: %v", c.IssuedAt)
-	}
-	if c.ExpiresAt.Unix() != 1700003600 {
-		t.Errorf("wrong exp: %v", c.ExpiresAt)
-	}
+	is.Equal(t, c.Issuer, "https://cloud.google.com/iap", "")
+	is.Equal(t, c.Subject, "subject-123", "")
+	is.Equal(t, c.Email, "user@example.com", "")
+	is.Equal(t, c.HostedDomain, "example.com", "")
+	is.Equal(t, c.Audience, "/projects/123/global/backendServices/456", "")
+	is.Equal(t, len(c.AccessLevels), 2, "")
+	is.Equal(t, c.AccessLevels[0], "level1", "")
+	is.Equal(t, c.IssuedAt.Unix(), int64(1700000000), "")
+	is.Equal(t, c.ExpiresAt.Unix(), int64(1700003600), "")
 }
 
 func TestParseClaims_EmptyPayload(t *testing.T) {
 	c := parseClaims(map[string]any{})
-	if c.Issuer != "" || c.Email != "" || c.Subject != "" {
-		t.Error("expected empty claims from empty payload")
-	}
+	is.Equal(t, c.Issuer, "", "")
+	is.Equal(t, c.Email, "", "")
+	is.Equal(t, c.Subject, "", "")
 }

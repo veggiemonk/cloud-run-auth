@@ -6,6 +6,8 @@ import (
 	"crypto/cipher"
 	"testing"
 	"time"
+
+	"github.com/veggiemonk/cloud-run-auth/internal/is"
 )
 
 func newTestStore(t *testing.T) *Store {
@@ -15,13 +17,9 @@ func newTestStore(t *testing.T) *Store {
 		key[i] = byte(i)
 	}
 	block, err := aes.NewCipher(key)
-	if err != nil {
-		t.Fatal(err)
-	}
+	is.NoErr(t, err)
 	aead, err := cipher.NewGCM(block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	is.NoErr(t, err)
 	return &Store{aead: aead}
 }
 
@@ -30,22 +28,14 @@ func TestEncryptDecrypt(t *testing.T) {
 	plaintext := []byte("super-secret-token-value")
 
 	encrypted, err := s.encrypt(plaintext)
-	if err != nil {
-		t.Fatal(err)
-	}
+	is.NoErr(t, err)
 
-	if bytes.Equal(encrypted, plaintext) {
-		t.Error("encrypted should differ from plaintext")
-	}
+	is.True(t, !bytes.Equal(encrypted, plaintext))
 
 	decrypted, err := s.decrypt(encrypted)
-	if err != nil {
-		t.Fatal(err)
-	}
+	is.NoErr(t, err)
 
-	if !bytes.Equal(decrypted, plaintext) {
-		t.Errorf("decrypted = %q, want %q", decrypted, plaintext)
-	}
+	is.True(t, bytes.Equal(decrypted, plaintext))
 }
 
 func TestEncryptDecrypt_DifferentCiphertexts(t *testing.T) {
@@ -55,23 +45,17 @@ func TestEncryptDecrypt_DifferentCiphertexts(t *testing.T) {
 	enc1, _ := s.encrypt(plaintext)
 	enc2, _ := s.encrypt(plaintext)
 
-	if bytes.Equal(enc1, enc2) {
-		t.Error("two encryptions of same plaintext should differ (random nonce)")
-	}
+	is.True(t, !bytes.Equal(enc1, enc2))
 
 	dec1, _ := s.decrypt(enc1)
 	dec2, _ := s.decrypt(enc2)
-	if !bytes.Equal(dec1, dec2) {
-		t.Error("both should decrypt to same value")
-	}
+	is.True(t, bytes.Equal(dec1, dec2))
 }
 
 func TestDecrypt_TooShort(t *testing.T) {
 	s := newTestStore(t)
 	_, err := s.decrypt([]byte("short"))
-	if err == nil {
-		t.Error("expected error for short ciphertext")
-	}
+	is.True(t, err != nil)
 }
 
 func TestSessionToken(t *testing.T) {
@@ -82,13 +66,7 @@ func TestSessionToken(t *testing.T) {
 	}
 
 	tok := sess.Token()
-	if tok.AccessToken != "access-123" {
-		t.Errorf("AccessToken = %q, want %q", tok.AccessToken, "access-123")
-	}
-	if tok.RefreshToken != "refresh-456" {
-		t.Errorf("RefreshToken = %q, want %q", tok.RefreshToken, "refresh-456")
-	}
-	if tok.TokenType != "Bearer" {
-		t.Errorf("TokenType = %q, want %q", tok.TokenType, "Bearer")
-	}
+	is.Equal(t, tok.AccessToken, "access-123", "")
+	is.Equal(t, tok.RefreshToken, "refresh-456", "")
+	is.Equal(t, tok.TokenType, "Bearer", "")
 }

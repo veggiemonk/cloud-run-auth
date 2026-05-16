@@ -7,29 +7,29 @@ run:
 
 linters:
   enable:
-    - bodyclose       # checks HTTP response body is closed
-    - copyloopvar     # Go 1.22+ loop var capture
-    - dupword         # catches "the the"
-    - durationcheck   # multiplication of two durations
+    - bodyclose # checks HTTP response body is closed
+    - copyloopvar # Go 1.22+ loop var capture
+    - dupword # catches "the the"
+    - durationcheck # multiplication of two durations
     - embeddedstructfieldcheck
-    - errcheck        # unchecked errors
-    - errorlint       # errors.Is / errors.As hygiene
+    - errcheck # unchecked errors
+    - errorlint # errors.Is / errors.As hygiene
     - forcetypeassert # type assertions without the comma-ok form
-    - gocritic        # opinionated diagnostics
-    - gosec           # security scanner
-    - govet           # stdlib vet
-    - ineffassign     # ineffectual assignments
-    - intrange        # prefer `for range N`
-    - misspell        # spelling
+    - gocritic # opinionated diagnostics
+    - gosec # security scanner
+    - govet # stdlib vet
+    - ineffassign # ineffectual assignments
+    - intrange # prefer `for range N`
+    - misspell # spelling
     - modernize
-    - nilerr          # `return nil` after checking err != nil
-    - noctx           # http requests without context
-    - perfsprint      # fmt.Sprintf → string concat where safe
-    - prealloc        # slice preallocation hints
-    - staticcheck     # staticcheck.io
-    - unconvert       # redundant type conversions
-    - unparam         # unused function parameters
-    - unused          # dead code
+    - nilerr # `return nil` after checking err != nil
+    - noctx # http requests without context
+    - perfsprint # fmt.Sprintf → string concat where safe
+    - prealloc # slice preallocation hints
+    - staticcheck # staticcheck.io
+    - unconvert # redundant type conversions
+    - unparam # unused function parameters
+    - unused # dead code
 
   settings:
     govet:

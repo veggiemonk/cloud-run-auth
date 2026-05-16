@@ -18,11 +18,15 @@ import (
 var Default = Help
 
 const (
-	modulePath = "github.com/veggiemonk/cloud-run-auth"
-	binDir     = "bin"
-	distDir    = "dist"
+	binDir  = "bin"
+	distDir = "dist"
+)
 
-	ratchetVersion = "v0.11.4"
+var (
+	releaseOSes   = []string{"linux", "darwin"}
+	releaseArches = []string{"amd64", "arm64"}
+	goFlags       = "-trimpath"
+	ldFlags       = "-s -w"
 )
 
 // Each entry maps a binary name to its main package.
@@ -31,13 +35,6 @@ var binaries = map[string]string{
 	"runoauth":     "./cmd/runoauth",
 	"runoauthprod": "./cmd/runoauthprod",
 }
-
-var (
-	releaseOSes   = []string{"linux", "darwin"}
-	releaseArches = []string{"amd64", "arm64"}
-	goFlags       = "-trimpath"
-	ldFlags       = "-s -w"
-)
 
 func runCmd(cmd string, args ...string) error {
 	return sh.RunV(cmd, args...)
@@ -91,12 +88,12 @@ func Install() error {
 
 // Run tests with race
 func Test() error {
-	return runCmd("go", "test", "-race", "-count=1", "-shuffle=on", "-timeout=10m", "./...")
+	return runCmd("go", "test", "-race", "-shuffle=on", "-timeout=1m", "./...")
 }
 
 // Run tests verbose
 func TestV() error {
-	return runCmd("go", "test", "-race", "-count=1", "-shuffle=on", "-timeout=10m", "-v", "./...")
+	return runCmd("go", "test", "-race", "-shuffle=on", "-timeout=1m", "-v", "./...")
 }
 
 // Coverage report
@@ -160,7 +157,8 @@ func Tidy() error {
 }
 
 // Bump all deps, then tidy
-func DepsUpdate() error {
+func Update() error {
+	mg.Deps(UpdateActions)
 	if err := runCmd("go", "get", "-u", "go@latest"); err != nil {
 		return err
 	}
@@ -171,7 +169,7 @@ func DepsUpdate() error {
 }
 
 // Refresh pinned GH Action SHAs via ratchet
-func GaUpdate() error {
+func UpdateActions() error {
 	files, err := filepath.Glob(".github/workflows/*.yml")
 	if err != nil || len(files) == 0 {
 		fmt.Println("no .github/workflows/*.yml; nothing to do")
@@ -235,19 +233,6 @@ func CheckTools() error {
 		return fmt.Errorf("missing required tools")
 	}
 	return nil
-}
-
-// go install pinned host tools
-func InstallTools() {
-	tools := map[string]string{
-		"github.com/sethvargo/ratchet": ratchetVersion,
-	}
-
-	for pkg, ver := range tools {
-		runCmd("go", "install", fmt.Sprintf("%s@%s", pkg, ver))
-	}
-
-	CheckTools()
 }
 
 // Cross-compile every binary to dist/
@@ -333,6 +318,3 @@ func Clean() {
 	os.RemoveAll(distDir)
 	os.Remove("coverage.out")
 }
-
-// Silence unused-import vet warnings for modulePath.
-var _ = modulePath

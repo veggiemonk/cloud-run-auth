@@ -1,4 +1,13 @@
-// Package session provides a Firestore-backed session store with AES-GCM token encryption.
+// Package session owns the production session store: a Firestore
+// collection of session documents whose OAuth access/refresh tokens are
+// sealed with AES-256-GCM before they ever leave the process, plus the
+// Create/Get/Delete/UpdateToken surface that runoauthprod uses.
+//
+// Exists as the durable, multi-instance counterpart to internal/oauth's
+// in-memory SessionStore: Cloud Run scales to N replicas with no shared
+// memory, so the source of truth has to be external; tokens at rest
+// must be encrypted with a key the database operator cannot see, which
+// is why the AEAD lives here and the key is supplied at boot.
 package session
 
 import (
