@@ -8,7 +8,8 @@
 package render
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"net/http"
 	"strings"
 )
@@ -23,12 +24,14 @@ func WantsJSON(r *http.Request) bool {
 	return strings.Contains(accept, "application/json")
 }
 
-// JSON writes data as a JSON response with proper content-type.
+// JSON writes data as indented JSON with map keys sorted and a trailing
+// newline, with proper content-type.
 func JSON(w http.ResponseWriter, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(data); err != nil {
+	b, err := json.Marshal(data, jsontext.WithIndent("  "), json.Deterministic(true))
+	if err != nil {
 		http.Error(w, `{"error":"json encoding failed"}`, http.StatusInternalServerError)
+		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(append(b, '\n'))
 }

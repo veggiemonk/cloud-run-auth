@@ -14,7 +14,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -184,7 +184,7 @@ func fetchUserInfo(ctx context.Context, cfg *oauth2.Config, token *oauth2.Token)
 	}
 
 	info = &userInfo{}
-	if err := json.NewDecoder(resp.Body).Decode(info); err != nil {
+	if err := json.UnmarshalRead(resp.Body, info); err != nil {
 		return nil, fmt.Errorf("failed to decode userinfo: %w", err)
 	}
 	return info, nil
