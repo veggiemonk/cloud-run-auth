@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -278,7 +278,7 @@ func fetchUserInfoProd(
 	}
 
 	info = &userInfoResponse{}
-	if err := json.NewDecoder(resp.Body).Decode(info); err != nil {
+	if err := json.UnmarshalRead(resp.Body, info); err != nil {
 		return nil, fmt.Errorf("failed to decode userinfo: %w", err)
 	}
 	return info, nil

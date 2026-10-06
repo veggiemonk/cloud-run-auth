@@ -1,7 +1,8 @@
 package iaphandler
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"log/slog"
 	"net/http"
 
@@ -9,6 +10,9 @@ import (
 	"github.com/veggiemonk/cloud-run-auth/internal/iap"
 	"github.com/veggiemonk/cloud-run-auth/internal/shared/render"
 )
+
+// prettyJSON indents the decoded JWT parts and sorts their keys.
+var prettyJSON = json.JoinOptions(jsontext.WithIndent("  "), json.Deterministic(true))
 
 // JWT returns a handler that inspects the IAP JWT.
 func JWT(verifier *iap.Verifier) http.HandlerFunc {
@@ -33,14 +37,14 @@ func JWT(verifier *iap.Verifier) http.HandlerFunc {
 			data.Claims = result.Claims
 
 			if result.Header != nil {
-				if b, err := json.MarshalIndent(result.Header, "", "  "); err != nil {
+				if b, err := json.Marshal(result.Header, prettyJSON); err != nil {
 					slog.Error("failed to marshal JWT header", "error", err)
 				} else {
 					data.HeaderJSON = string(b)
 				}
 			}
 			if result.Payload != nil {
-				if b, err := json.MarshalIndent(result.Payload, "", "  "); err != nil {
+				if b, err := json.Marshal(result.Payload, prettyJSON); err != nil {
 					slog.Error("failed to marshal JWT payload", "error", err)
 				} else {
 					data.PayloadJSON = string(b)
