@@ -6,9 +6,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/magefile/mage/mg"
@@ -196,8 +198,8 @@ func Doc() error {
 // Build container images for all binaries with ko
 func Ko() error {
 	mg.Deps(Generate)
-	for name := range binaries {
-		if err := runCmd("ko", "build", binaries[name], "--bare", "--platform=linux/amd64"); err != nil {
+	for _, pkg := range binaries {
+		if err := runCmd("ko", "build", pkg, "--bare", "--platform=linux/amd64"); err != nil {
 			return err
 		}
 	}
@@ -289,10 +291,7 @@ func Release() error {
 // Build then run a binary by name: mage run runiap
 func Run(name string) error {
 	if _, ok := binaries[name]; !ok {
-		names := make([]string, 0, len(binaries))
-		for n := range binaries {
-			names = append(names, n)
-		}
+		names := slices.Sorted(maps.Keys(binaries))
 		return fmt.Errorf("unknown binary %q; known: %s", name, strings.Join(names, ", "))
 	}
 	mg.Deps(Build)

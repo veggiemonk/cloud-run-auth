@@ -3,7 +3,7 @@ package iaphandler
 import (
 	"log/slog"
 	"net/http"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/veggiemonk/cloud-run-auth/internal/components/iapui"
@@ -23,12 +23,15 @@ func Headers() http.HandlerFunc {
 			})
 		}
 
-		sort.Slice(entries, func(i, j int) bool {
+		slices.SortFunc(entries, func(a, b iapui.HeaderEntry) int {
 			// IAP headers first, then alphabetical.
-			if entries[i].IsIAP != entries[j].IsIAP {
-				return entries[i].IsIAP
+			if a.IsIAP != b.IsIAP {
+				if a.IsIAP {
+					return -1
+				}
+				return 1
 			}
-			return entries[i].Name < entries[j].Name
+			return strings.Compare(a.Name, b.Name)
 		})
 
 		data := iapui.HeadersData{Headers: entries}
